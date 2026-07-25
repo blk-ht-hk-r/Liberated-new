@@ -1,0 +1,141 @@
+import { Platform } from "react-native";
+import * as SecureStore from "@/storage/secureStore";
+import * as FileSystem from "expo-file-system";
+import { ProofType } from "@/types";
+
+const isWeb = Platform.OS === "web";
+
+/**
+ * PRIVACY-CRITICAL MODULE.
+ *
+ * All daily "proof" (friend names, reflections, photos) is stored ONLY on the
+ * device and never sent to any server. Text is kept in the OS secure enclave
+ * (Keychain / Keystore) via expo-secure-store. Photos are copied into the app's
+ * private sandbox directory. Everything is purged automatically once its day has
+ * passed so nothing lingers.
+ */
+
+export interface StoredProof {
+  activityId: number;
+  proofType: ProofType;
+  date: string; // yyyy-mm-dd (local)
+  textValues?: string[];
+  imageUri?: string;
+  minutes?: number;
+  count?: number;
+  completedAt: string; // ISO
+}
+
+const INDEX_KEY = "liberated.proof.index";
+const PROOF_DIR = FileSystem.documentDirectory + "liberated-proof/";
+
+interface IndexEntry {
+  key: string;
+  date: string;
+  imageUri?: string;
+}
+
+function proofKey(activityId: number, date: string): string {
+  return `liberated.proof.${activityId}.${date}`;
+}
+
+async function readIndex(): Promise<IndexEntry[]> {
+  const raw = await SecureStore.getItemAsync(INDEX_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as IndexEntry[];
+  } catch {
+    return [];
+  }
+}
+
+async function writeIndex(entries: IndexEntry[]): Promise<void> {
+  await SecureStore.setItemAsync(INDEX_KEY, JSON.stringify(entries));
+}
+
+async function ensureDir(): Promise<void> {
+  const info = await FileSystem.getInfoAsync(PROOF_DIR);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(PROOF_DIR, { intermediates: true });
+  }
+}
+
+/** Copy a picked image into the private proof directory and return its uri. */
+async function persistImage(
+  activityId: number,
+  date: string,
+  sourceUri: string,
+): Promise<string> {
+  await ensureDir();
+  const ext = sourceUri.split(".").pop()?.split("?")[0] || "jpg";
+  const dest = `${PROOF_DIR}${activityId}_${date}.${ext}`;
+  await FileSystem.copyAsync({ from: sourceUri, to: dest });
+  return dest;
+}
+
+export async function saveProof(
+  input: Omit<StoredProof, "completedAt"> & { completedAt?: string },
+): Promise<StoredProof> {
+  const completedAt = input.completedAt ?? new Date().toISOString();
+  let imageUri = input.imageUri;
+  // expo-file-system has no real filesystem on web, so keep the picked uri
+  // (blob/data url) as-is there and only copy into the sandbox on native.
+  if (!isWeb && imageUri && !imageUri.startsWith(PROOF_DIR)) {
+    imageUri = await persistImage(input.activityId, input.date, imageUri);
+  }
+
+  const proof: StoredProof = { ...input, imageUri, completedAt };
+  const key = proofKey(input.activityId, input.date);
+  await SecureStore.setItemAsync(key, JSON.stringify(proof));
+
+  const index = await readIndex();
+  const filtered = index.filter((e) => e.key !== key);
+  filtered.push({ key, date: input.date, imageUri });
+  await writeIndex(filtered);
+
+  return proof;
+}
+
+export async function getProof(
+  activityId: number,
+  date: string,
+): Promise<StoredProof | null> {
+  const raw = await SecureStore.getItemAsync(proofKey(activityId, date));
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredProof;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Delete every stored proof whose date is not today. Called on app launch and
+ * when the tracking page opens, so yesterday's private data never sticks around.
+ */
+export async function purgeOldProof(today: string): Promise<void> {
+  const index = await readIndex();
+  const keep: IndexEntry[] = [];
+  for (const entry of index) {
+    if (entry.date === today) {
+      keep.push(entry);
+      continue;
+    }
+    await SecureStore.deleteItemAsync(entry.key);
+    if (!isWeb && entry.imageUri) {
+      try {
+        await FileSystem.deleteAsync(entry.imageUri, { idempotent: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+  await writeIndex(keep);
+}
+
+export function localDateString(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

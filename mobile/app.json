@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Liberated",
+    "slug": "liberated",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "liberated",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "backgroundColor": "#01332F"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.liberated.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Liberated uses the camera so you can privately capture proof of your daily task. This photo stays only on your device.",
+        "NSPhotoLibraryUsageDescription": "Liberated lets you attach a photo as private proof of your daily task. It stays only on your device."
+      }
+    },
+    "android": {
+      "package": "com.liberated.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Liberated lets you attach a photo as private proof. It stays only on your device.",
+          "cameraPermission": "Liberated uses the camera to privately capture proof of your task."
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://localhost:8080",
+      "googleMock": true
+    }
+  }
+}

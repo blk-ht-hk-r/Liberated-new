@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: liberated-backend
+  datasource:
+    # File-based H2 so challenge state survives restarts during development.
+    url: jdbc:h2:file:./data/liberated;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# --- Liberated feature configuration ---------------------------------------
+# Every integration is config-driven. While *.mock = true (default), the app
+# runs fully without any external credentials. Drop real keys in and flip the
+# mock flag to false to go live.
+liberated:
+  jwt:
+    # Override in production via LIBERATED_JWT_SECRET env var. Must be >= 32 bytes.
+    secret: ${LIBERATED_JWT_SECRET:change-me-in-prod-this-is-a-dev-only-secret-key-32b+}
+    expiration-ms: 604800000 # 7 days
+
+  challenge:
+    default-days: 7
+
+  auth:
+    google:
+      mock: ${GOOGLE_MOCK:true}
+      client-id: ${GOOGLE_CLIENT_ID:}
+    otp:
+      mock: ${OTP_MOCK:true}
+      # When mock=true this fixed code is always accepted.
+      mock-code: "000000"
+      ttl-seconds: 300
+
+  sms:
+    twilio:
+      mock: ${TWILIO_MOCK:true}
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
+
+  push:
+    expo:
+      mock: ${EXPO_PUSH_MOCK:true}
+      endpoint: https://exp.host/--/api/v2/push/send
+
+logging:
+  level:
+    com.liberated: INFO

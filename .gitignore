@@ -1,0 +1,4 @@
+
+# JVM crash logs
+replay_pid*.log
+hs_err_pid*.log
