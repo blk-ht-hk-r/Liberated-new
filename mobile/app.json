@@ -14,6 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.liberated.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Liberated uses the camera so you can privately capture proof of your daily task. This photo stays only on your device.",
         "NSPhotoLibraryUsageDescription": "Liberated lets you attach a photo as private proof of your daily task. It stays only on your device."
@@ -26,6 +27,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
@@ -36,7 +38,11 @@
     ],
     "extra": {
       "apiBaseUrl": "http://localhost:8080",
-      "googleMock": true
+      "googleMock": true,
+      "googleIosClientId": "",
+      "googleAndroidClientId": "",
+      "googleWebClientId": "",
+      "appleMock": true
     }
   }
 }

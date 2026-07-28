@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,11 +12,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/store/auth";
 import { apiErrorMessage } from "@/api/client";
 import { config } from "@/config";
 import { colors, fonts, radius, shadow, spacing } from "@/theme";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Screen = "welcome" | "phone" | "email";
 
@@ -38,6 +43,13 @@ export default function Login() {
 
   const auth = useAuth();
 
+  // Google OAuth request. In mock mode we skip the real provider entirely.
+  const [, googleResponse, promptGoogle] = Google.useAuthRequest({
+    iosClientId: config.google.iosClientId,
+    androidClientId: config.google.androidClientId,
+    webClientId: config.google.webClientId,
+  });
+
   const run = async (fn: () => Promise<void>) => {
     setError(null);
     setLoading(true);
@@ -49,6 +61,24 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Complete Google sign-in once the provider returns an id_token.
+  useEffect(() => {
+    if (googleResponse?.type === "success") {
+      const idToken =
+        googleResponse.params?.id_token ??
+        googleResponse.authentication?.idToken;
+      if (idToken) {
+        run(async () => {
+          await auth.loginWithGoogle(idToken);
+          router.replace("/(app)/home");
+        });
+      }
+    } else if (googleResponse?.type === "error") {
+      setError("Google sign-in failed. Please try again.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleResponse]);
 
   const submitEmail = () =>
     run(async () => {
@@ -74,17 +104,65 @@ export default function Login() {
 
   const googleSignIn = () =>
     run(async () => {
-      const idToken = config.googleMock ? `mock-token-${Date.now()}` : "";
-      if (!idToken) {
-        setError("Add Google OAuth credentials to enable live sign-in.");
+      if (config.googleMock) {
+        await auth.loginWithGoogle(`mock-token-${Date.now()}`);
+        router.replace("/(app)/home");
         return;
       }
-      await auth.loginWithGoogle(idToken);
-      router.replace("/(app)/home");
+      if (
+        !config.google.iosClientId &&
+        !config.google.androidClientId &&
+        !config.google.webClientId
+      ) {
+        setError("Add Google OAuth client IDs to enable live sign-in.");
+        return;
+      }
+      await promptGoogle();
     });
 
   const appleSignIn = () =>
-    setError("Apple sign-in is coming soon. Use Google or your mobile number.");
+    run(async () => {
+      if (config.appleMock) {
+        await auth.loginWithApple(`mock-apple-${Date.now()}`);
+        router.replace("/(app)/home");
+        return;
+      }
+      if (Platform.OS !== "ios") {
+        setError("Apple sign-in is only available on iOS devices.");
+        return;
+      }
+      const available = await AppleAuthentication.isAvailableAsync();
+      if (!available) {
+        setError("Apple sign-in is not available on this device.");
+        return;
+      }
+      try {
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+        if (!credential.identityToken) {
+          setError("Apple did not return an identity token.");
+          return;
+        }
+        const fullName = [
+          credential.fullName?.givenName,
+          credential.fullName?.familyName,
+        ]
+          .filter(Boolean)
+          .join(" ");
+        await auth.loginWithApple(
+          credential.identityToken,
+          fullName || undefined,
+        );
+        router.replace("/(app)/home");
+      } catch (e: any) {
+        if (e?.code === "ERR_REQUEST_CANCELED") return;
+        throw e;
+      }
+    });
 
   const skipLogin = () =>
     run(async () => {

@@ -22,4 +22,15 @@ function resolveApiBaseUrl(): string {
 export const config = {
   apiBaseUrl: resolveApiBaseUrl(),
   googleMock: (Constants.expoConfig?.extra as any)?.googleMock ?? true,
+  google: {
+    iosClientId: (Constants.expoConfig?.extra as any)?.googleIosClientId as
+      | string
+      | undefined,
+    androidClientId: (Constants.expoConfig?.extra as any)
+      ?.googleAndroidClientId as string | undefined,
+    webClientId: (Constants.expoConfig?.extra as any)?.googleWebClientId as
+      | string
+      | undefined,
+  },
+  appleMock: (Constants.expoConfig?.extra as any)?.appleMock ?? true,
 };

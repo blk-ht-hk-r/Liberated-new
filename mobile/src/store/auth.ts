@@ -22,6 +22,7 @@ interface AuthState {
   requestOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, code: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (identityToken: string, fullName?: string) => Promise<void>;
   /** Dev-only: start a local offline demo session with no backend. */
   enableOfflineMode: () => Promise<void>;
   markQuoteShown: () => void;
@@ -96,6 +97,15 @@ export const useAuth = create<AuthState>((set) => ({
   loginWithGoogle: async (idToken) => {
     const { data } = await api.post<AuthResponse>("/api/auth/google", {
       idToken,
+    });
+    await setToken(data.token);
+    applyAuth(set, data);
+  },
+
+  loginWithApple: async (identityToken, fullName) => {
+    const { data } = await api.post<AuthResponse>("/api/auth/apple", {
+      identityToken,
+      fullName,
     });
     await setToken(data.token);
     applyAuth(set, data);

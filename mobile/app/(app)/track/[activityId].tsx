@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
 import { Button } from "@/components/Button";
 import { PrivacyBanner } from "@/components/PrivacyBanner";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -79,6 +80,35 @@ export default function TrackActivity() {
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const nowMs = useNow(timerStart ? 1000 : 60000);
 
+  const gongRef = useRef<Audio.Sound | null>(null);
+  const closingGongPlayedRef = useRef(false);
+
+  useEffect(() => {
+    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {});
+    return () => {
+      gongRef.current?.unloadAsync().catch(() => {});
+      gongRef.current = null;
+    };
+  }, []);
+
+  const playGong = useCallback(async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/gong.mp3"),
+        { shouldPlay: true },
+      );
+      gongRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {});
+          if (gongRef.current === sound) gongRef.current = null;
+        }
+      });
+    } catch {
+      // Sound is a gentle enhancement; ignore playback failures.
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       await purgeOldProof(today);
@@ -87,6 +117,24 @@ export default function TrackActivity() {
       setLoading(false);
     })();
   }, [id, today]);
+
+  // Sound the closing gong 1 min before the end (so it finishes at the target),
+  // then stop the timer exactly at the target.
+  useEffect(() => {
+    if (timerStart == null || !cfg.timerTargetMin) return;
+    const targetMs = cfg.timerTargetMin * 60000;
+    const elapsedMs = nowMs - timerStart;
+
+    if (!closingGongPlayedRef.current && elapsedMs >= targetMs - 60000) {
+      closingGongPlayedRef.current = true;
+      playGong();
+    }
+
+    if (elapsedMs >= targetMs) {
+      setTimerMinutes(cfg.timerTargetMin);
+      setTimerStart(null);
+    }
+  }, [nowMs, timerStart, cfg.timerTargetMin, playGong]);
 
   if (!activity) {
     return (
@@ -113,6 +161,13 @@ export default function TrackActivity() {
 
   const alreadyDone = !!existing;
 
+  // Only proof types that store personal content (photos, names, written text)
+  // warrant the on-device privacy reassurance.
+  const handlesPrivateData =
+    activity.proofType === "PHOTO" ||
+    activity.proofType === "NAMED_LIST" ||
+    activity.proofType === "TEXT_ENTRY";
+
   const pickImage = async (fromCamera: boolean) => {
     setError(null);
     const perm = fromCamera
@@ -130,10 +185,31 @@ export default function TrackActivity() {
     }
   };
 
-  const elapsedTimerMin =
+  const timerTargetSec = cfg.timerTargetMin ? cfg.timerTargetMin * 60 : null;
+
+  const rawElapsedTimerSec =
     timerStart != null
-      ? Math.floor((nowMs - timerStart) / 60000)
-      : timerMinutes;
+      ? Math.max(0, Math.floor((nowMs - timerStart) / 1000))
+      : timerMinutes != null
+        ? timerMinutes * 60
+        : null;
+
+  const elapsedTimerSec =
+    rawElapsedTimerSec != null && timerTargetSec != null
+      ? Math.min(rawElapsedTimerSec, timerTargetSec)
+      : rawElapsedTimerSec;
+
+  const elapsedTimerMin =
+    elapsedTimerSec != null ? Math.floor(elapsedTimerSec / 60) : null;
+
+  const timerReachedTarget =
+    timerTargetSec != null && (elapsedTimerSec ?? 0) >= timerTargetSec;
+
+  const formatClock = (totalSec: number): string => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
 
   const validate = (): boolean => {
     switch (activity.proofType) {
@@ -235,8 +311,12 @@ export default function TrackActivity() {
             <Text style={styles.title}>{activity.title}</Text>
             <Text style={styles.body}>{activity.description}</Text>
 
-            <View style={{ height: spacing.lg }} />
-            <PrivacyBanner />
+            {handlesPrivateData ? (
+              <>
+                <View style={{ height: spacing.lg }} />
+                <PrivacyBanner />
+              </>
+            ) : null}
             <View style={{ height: spacing.lg }} />
 
             {loading ? (
@@ -306,22 +386,27 @@ export default function TrackActivity() {
                 {activity.proofType === "TIMER" && (
                   <View style={styles.timerBox}>
                     <Text style={styles.timerValue}>
-                      {elapsedTimerMin ?? 0}
-                      <Text style={styles.timerUnit}> min</Text>
+                      {formatClock(elapsedTimerSec ?? 0)}
                     </Text>
                     {cfg.timerTargetMin ? (
                       <Text style={styles.body}>
                         Target: {cfg.timerTargetMin} minutes
                       </Text>
                     ) : null}
-                    {timerStart == null ? (
+                    {timerReachedTarget ? (
+                      <Text style={styles.timerDone}>✓ Session complete</Text>
+                    ) : timerStart == null ? (
                       <Button
                         label={timerMinutes ? "Resume" : "Start timer"}
-                        onPress={() =>
-                          setTimerStart(
-                            Date.now() - (timerMinutes ?? 0) * 60000,
-                          )
-                        }
+                        onPress={() => {
+                          const startedFrom = (timerMinutes ?? 0) * 60000;
+                          // If resuming past the closing point, don't replay the end gong.
+                          closingGongPlayedRef.current =
+                            !!cfg.timerTargetMin &&
+                            startedFrom >= cfg.timerTargetMin * 60000 - 60000;
+                          setTimerStart(Date.now() - startedFrom);
+                          playGong();
+                        }}
                         style={{ marginTop: spacing.md }}
                       />
                     ) : (
@@ -377,6 +462,9 @@ export default function TrackActivity() {
                   label="Mark complete"
                   onPress={submit}
                   loading={submitting}
+                  disabled={
+                    activity.proofType === "TIMER" && !timerReachedTarget
+                  }
                   style={{ marginTop: spacing.lg }}
                 />
               </View>
@@ -557,6 +645,12 @@ const styles = StyleSheet.create({
   },
   timerValue: { fontFamily: fonts.display, fontSize: 56, color: colors.brass },
   timerUnit: { fontFamily: fonts.body, fontSize: 20, color: colors.inkMuted },
+  timerDone: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 16,
+    color: colors.brass,
+    marginTop: spacing.md,
+  },
   error: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.danger },
   doneBox: {
     backgroundColor: colors.successBg,
