@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login",
                                 "/api/auth/otp/request", "/api/auth/otp/verify",
-                                "/api/auth/google")
+                                "/api/auth/google", "/api/auth/apple")
                         .permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/activities").permitAll()

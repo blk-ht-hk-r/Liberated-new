@@ -1,4 +1,4 @@
-server:
+jserver:
   port: 8080
 
 spring:
@@ -39,6 +39,11 @@ liberated:
     google:
       mock: ${GOOGLE_MOCK:true}
       client-id: ${GOOGLE_CLIENT_ID:}
+    apple:
+      mock: ${APPLE_MOCK:true}
+      # Accepted audience(s): your iOS bundle id (com.liberated.app) and, if you
+      # also support web, your Services ID. Comma-separated.
+      client-id: ${APPLE_CLIENT_ID:com.liberated.app}
     otp:
       mock: ${OTP_MOCK:true}
       # When mock=true this fixed code is always accepted.

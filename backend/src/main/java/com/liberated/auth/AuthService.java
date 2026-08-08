@@ -17,15 +17,18 @@ public class AuthService {
     private final JwtService jwtService;
     private final OtpService otpService;
     private final GoogleAuthService googleAuthService;
+    private final AppleAuthService appleAuthService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             JwtService jwtService, OtpService otpService,
-            GoogleAuthService googleAuthService) {
+            GoogleAuthService googleAuthService,
+            AppleAuthService appleAuthService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.otpService = otpService;
         this.googleAuthService = googleAuthService;
+        this.appleAuthService = appleAuthService;
     }
 
     public AuthResponse register(RegisterRequest req) {
@@ -82,6 +85,29 @@ public class AuthService {
         }
         if (user.getAuthProvider() == null) {
             user.setAuthProvider(AuthProvider.GOOGLE);
+        }
+        userRepository.save(user);
+        return toResponse(user);
+    }
+
+    public AuthResponse apple(AppleRequest req) {
+        AppleAuthService.AppleProfile profile = appleAuthService.verify(req.identityToken());
+        User user = userRepository.findByAppleId(profile.appleId())
+                .or(() -> profile.email() != null
+                        ? userRepository.findByEmail(profile.email())
+                        : java.util.Optional.empty())
+                .orElseGet(() -> new User(profile.email(), AuthProvider.APPLE));
+        user.setAppleId(profile.appleId());
+        if (user.getEmail() == null) {
+            user.setEmail(profile.email());
+        }
+        if (user.getDisplayName() == null) {
+            user.setDisplayName(req.fullName() != null && !req.fullName().isBlank()
+                    ? req.fullName()
+                    : "Liberated User");
+        }
+        if (user.getAuthProvider() == null) {
+            user.setAuthProvider(AuthProvider.APPLE);
         }
         userRepository.save(user);
         return toResponse(user);

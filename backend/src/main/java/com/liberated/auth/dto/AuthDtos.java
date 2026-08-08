@@ -33,6 +33,11 @@ public class AuthDtos {
                         @NotBlank String idToken) {
         }
 
+        public record AppleRequest(
+                        @NotBlank String identityToken,
+                        String fullName) {
+        }
+
         public record AuthResponse(
                         String token,
                         Long userId,

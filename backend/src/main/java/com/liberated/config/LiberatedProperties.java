@@ -69,10 +69,15 @@ public class LiberatedProperties {
 
     public static class Auth {
         private final Google google = new Google();
+        private final Apple apple = new Apple();
         private final Otp otp = new Otp();
 
         public Google getGoogle() {
             return google;
+        }
+
+        public Apple getApple() {
+            return apple;
         }
 
         public Otp getOtp() {
@@ -81,6 +86,31 @@ public class LiberatedProperties {
 
         public static class Google {
             private boolean mock = true;
+            private String clientId;
+
+            public boolean isMock() {
+                return mock;
+            }
+
+            public void setMock(boolean mock) {
+                this.mock = mock;
+            }
+
+            public String getClientId() {
+                return clientId;
+            }
+
+            public void setClientId(String clientId) {
+                this.clientId = clientId;
+            }
+        }
+
+        public static class Apple {
+            private boolean mock = true;
+            /**
+             * Accepted audience(s) - normally your app bundle id
+             * (and Services ID for web). Comma-separated.
+             */
             private String clientId;
 
             public boolean isMock() {

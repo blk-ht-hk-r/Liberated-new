@@ -1,17 +1,17 @@
 package com.liberated.auth;
 
 import com.liberated.config.LiberatedProperties;
+import com.twilio.Twilio;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
  * Sends SMS via Twilio. While {@code liberated.sms.twilio.mock=true} it only
- * logs
- * the message (no external call, no credentials required). Flip the flag and
- * add
- * real Twilio credentials to go live - wire the actual Twilio SDK call in
- * {@link #sendViaTwilio}.
+ * logs the message (no external call, no credentials required). Set the flag to
+ * false and provide real Twilio credentials to go live.
  */
 @Service
 public class SmsService {
@@ -19,6 +19,7 @@ public class SmsService {
     private static final Logger log = LoggerFactory.getLogger(SmsService.class);
 
     private final LiberatedProperties props;
+    private volatile boolean twilioInitialized = false;
 
     public SmsService(LiberatedProperties props) {
         this.props = props;
@@ -35,14 +36,23 @@ public class SmsService {
 
     private void sendViaTwilio(String toPhone, String message,
             LiberatedProperties.Sms.Twilio twilio) {
-        // TODO: add com.twilio:twilio dependency and uncomment when going live.
-        //
-        // Twilio.init(twilio.getAccountSid(), twilio.getAuthToken());
-        // Message.creator(
-        // new PhoneNumber(toPhone),
-        // new PhoneNumber(twilio.getFromNumber()),
-        // message).create();
-        log.warn("Twilio live mode requested but SDK call not wired. to={} message=\"{}\"",
-                toPhone, message);
+        if (twilio.getAccountSid() == null || twilio.getAuthToken() == null
+                || twilio.getFromNumber() == null) {
+            throw new IllegalStateException(
+                    "Twilio live mode requires account-sid, auth-token and from-number");
+        }
+        if (!twilioInitialized) {
+            synchronized (this) {
+                if (!twilioInitialized) {
+                    Twilio.init(twilio.getAccountSid(), twilio.getAuthToken());
+                    twilioInitialized = true;
+                }
+            }
+        }
+        Message.creator(
+                new PhoneNumber(toPhone),
+                new PhoneNumber(twilio.getFromNumber()),
+                message).create();
+        log.info("[SMS] sent to={}", toPhone);
     }
 }

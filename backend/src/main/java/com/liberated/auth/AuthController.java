@@ -44,6 +44,11 @@ public class AuthController {
         return authService.google(req);
     }
 
+    @PostMapping("/apple")
+    public AuthResponse apple(@Valid @RequestBody AppleRequest req) {
+        return authService.apple(req);
+    }
+
     /** Store the caller's Expo push token (requires auth). */
     @PostMapping("/push-token")
     public ResponseEntity<Void> pushToken(@AuthenticationPrincipal Long userId,

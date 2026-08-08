@@ -23,6 +23,9 @@ public class User {
     @Column(unique = true)
     private String googleId;
 
+    @Column(unique = true)
+    private String appleId;
+
     private String displayName;
 
     @Enumerated(EnumType.STRING)
@@ -76,6 +79,14 @@ public class User {
 
     public void setGoogleId(String googleId) {
         this.googleId = googleId;
+    }
+
+    public String getAppleId() {
+        return appleId;
+    }
+
+    public void setAppleId(String appleId) {
+        this.appleId = appleId;
     }
 
     public String getDisplayName() {
