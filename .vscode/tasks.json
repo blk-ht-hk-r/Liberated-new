@@ -4,57 +4,47 @@
     {
       "label": "Run Backend",
       "type": "shell",
-      "command": "mvn spring-boot:run",
+      "command": "mvn",
+      "args": ["-Dspring-boot.run.profiles=local", "spring-boot:run"],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}/backend",
+        "shell": {
+          "executable": "cmd.exe",
+          "args": ["/c"]
+        }
       },
-      "env": {
-        "SPRING_PROFILES_ACTIVE": "local"
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
       },
-      "problemMatcher": ["$maven"],
       "group": {
         "kind": "build",
         "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "clear": false
       }
     },
     {
-      "label": "Build Backend",
+      "label": "Run Frontend",
       "type": "shell",
-      "command": "mvn -DskipTests package",
-      "options": {
-        "cwd": "${workspaceFolder}/backend"
-      },
-      "problemMatcher": ["$maven"],
-      "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "clear": false
-      }
-    },
-    {
-      "label": "Run Mobile",
-      "type": "shell",
-      "command": "npm start",
+      "command": "npm",
+      "args": ["start"],
       "options": {
         "cwd": "${workspaceFolder}/mobile"
       },
+      "isBackground": true,
       "problemMatcher": [],
-      "group": "build",
       "presentation": {
         "reveal": "always",
-        "panel": "shared",
+        "panel": "dedicated",
         "clear": false
-      }
+      },
+      "group": "build"
     },
     {
       "label": "Run Both",
-      "dependsOn": ["Run Backend", "Run Mobile"],
+      "dependsOn": ["Run Backend", "Run Frontend"],
       "dependsOrder": "parallel",
       "group": {
         "kind": "build",

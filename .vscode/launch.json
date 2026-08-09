@@ -2,26 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach to Spring Boot Backend",
       "type": "java",
-      "request": "attach",
-      "hostName": "localhost",
-      "port": 5005
-    },
-    {
-      "name": "Run Backend and Mobile",
-      "type": "pwa-node",
+      "name": "Debug Backend (local)",
       "request": "launch",
-      "program": "${workspaceFolder}/.vscode/empty.js",
-      "cwd": "${workspaceFolder}",
-      "preLaunchTask": "Run Both",
-      "console": "internalConsole",
-      "presentation": {
-        "hidden": false,
-        "group": "run",
-        "order": 1
-      }
+      "mainClass": "com.liberated.LiberatedApplication",
+      "projectName": "Liberated-backend",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "local"
+      },
+      "preLaunchTask": "Run Backend"
     }
-  ],
-  "compounds": []
+  ]
 }
