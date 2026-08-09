@@ -20,6 +20,7 @@ interface ChallengeStore {
   startChallenge: (activityIds: number[]) => Promise<void>;
   completeToday: () => Promise<void>;
   acknowledgePopups: () => Promise<void>;
+  reset: () => void;
 }
 
 function currentTimezone(): string {
@@ -50,7 +51,7 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       const { data } = await api.get<ChallengeState>("/api/challenge");
       set({ state: data, loading: false });
     } catch (e) {
-      set({ loading: false, error: "Could not load challenge" });
+      set({ state: null, loading: false, error: "Could not load challenge" });
     }
   },
 
@@ -61,6 +62,15 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
     }
     const { data } = await api.get<Activity[]>("/api/activities");
     set({ activities: data });
+  },
+
+  reset: () => {
+    set({
+      state: null,
+      activities: [],
+      loading: false,
+      error: null,
+    });
   },
 
   startChallenge: async (activityIds) => {

@@ -1,0 +1,12 @@
+liberated:
+  auth:
+    google:
+      mock: false
+      client-id: ${GOOGLE_CLIENT_ID}
+  jwt:
+    secret: ${LIBERATED_JWT_SECRET}
+
+spring:
+  h2:
+    console:
+      enabled: false

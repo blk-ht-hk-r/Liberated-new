@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -42,12 +42,20 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
 
   const auth = useAuth();
+  const nonce = useMemo(
+    () => Math.random().toString(36).substring(2) + Date.now().toString(36),
+    [],
+  );
 
   // Google OAuth request. In mock mode we skip the real provider entirely.
   const [, googleResponse, promptGoogle] = Google.useAuthRequest({
     iosClientId: config.google.iosClientId,
     androidClientId: config.google.androidClientId,
     webClientId: config.google.webClientId,
+    responseType: "id_token",
+    extraParams: {
+      nonce,
+    },
   });
 
   const run = async (fn: () => Promise<void>) => {
@@ -73,6 +81,10 @@ export default function Login() {
           await auth.loginWithGoogle(idToken);
           router.replace("/(app)/home");
         });
+      } else {
+        setError(
+          "Google sign-in succeeded but no ID token was returned. Check that your web client ID and responseType are configured correctly.",
+        );
       }
     } else if (googleResponse?.type === "error") {
       setError("Google sign-in failed. Please try again.");

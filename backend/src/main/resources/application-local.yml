@@ -1,0 +1,10 @@
+liberated:
+  auth:
+    google:
+      mock: false
+      # Use the client ID that matches the platform you are testing.
+      # For local native testing, this is typically your iOS or Android OAuth client ID.
+      client-id: "678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com"
+  jwt:
+    # Local dev secret. Must be at least 32 characters.
+    secret: "a-very-long-secret-with-at-least-32-characters"

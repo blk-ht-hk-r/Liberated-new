@@ -4,11 +4,15 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+  Fraunces_600SemiBold,
+  useFonts as useFraunces,
+} from "@expo-google-fonts/fraunces";
+import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
 } from "@expo-google-fonts/inter";
 import { useAuth } from "@/store/auth";
 import { purgeOldProof, localDateString } from "@/storage/secureProof";
@@ -17,11 +21,13 @@ import { colors } from "@/theme";
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded] = useFraunces({
+    Fraunces_400Regular,
+    Fraunces_400Regular_Italic,
+    Fraunces_600SemiBold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
-    Inter_700Bold,
   });
 
   const bootstrap = useAuth((s) => s.bootstrap);
@@ -58,7 +64,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Slot />
     </GestureHandlerRootView>
   );

@@ -1,9 +1,6 @@
-import { Platform } from "react-native";
 import * as SecureStore from "@/storage/secureStore";
 import * as FileSystem from "expo-file-system";
 import { ProofType } from "@/types";
-
-const isWeb = Platform.OS === "web";
 
 /**
  * PRIVACY-CRITICAL MODULE.
@@ -78,9 +75,7 @@ export async function saveProof(
 ): Promise<StoredProof> {
   const completedAt = input.completedAt ?? new Date().toISOString();
   let imageUri = input.imageUri;
-  // expo-file-system has no real filesystem on web, so keep the picked uri
-  // (blob/data url) as-is there and only copy into the sandbox on native.
-  if (!isWeb && imageUri && !imageUri.startsWith(PROOF_DIR)) {
+  if (imageUri && !imageUri.startsWith(PROOF_DIR)) {
     imageUri = await persistImage(input.activityId, input.date, imageUri);
   }
 
@@ -122,7 +117,7 @@ export async function purgeOldProof(today: string): Promise<void> {
       continue;
     }
     await SecureStore.deleteItemAsync(entry.key);
-    if (!isWeb && entry.imageUri) {
+    if (entry.imageUri) {
       try {
         await FileSystem.deleteAsync(entry.imageUri, { idempotent: true });
       } catch {

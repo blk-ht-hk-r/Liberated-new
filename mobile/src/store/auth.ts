@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { api, setToken, loadToken } from "@/api/client";
 import { OFFLINE_TOKEN, setOffline } from "@/api/mock";
+import { useChallenge } from "@/store/challenge";
 import { AuthResponse } from "@/types";
 
 interface AuthState {
@@ -128,6 +129,7 @@ export const useAuth = create<AuthState>((set) => ({
   logout: async () => {
     setOffline(false);
     await setToken(null);
+    useChallenge.getState().reset();
     set({
       userId: null,
       email: null,

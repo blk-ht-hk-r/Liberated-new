@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,7 +40,7 @@ export default function Home() {
   const quoteShown = useAuth((s) => s.quoteShown);
   const markQuoteShown = useAuth((s) => s.markQuoteShown);
 
-  const { state, fetchState, acknowledgePopups } = useChallenge();
+  const { state, loading, fetchState, acknowledgePopups } = useChallenge();
   const [showQuote, setShowQuote] = useState(false);
   const nowMs = useNow();
 
@@ -52,8 +59,6 @@ export default function Home() {
     markQuoteShown();
   };
 
-  const notStarted = !state || state.status === "NOT_STARTED";
-
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader
@@ -64,10 +69,14 @@ export default function Home() {
       />
 
       <View style={styles.sheet}>
-        {notStarted ? (
-          <NotStarted onStart={() => router.push("/(app)/select-activities")} />
-        ) : (
+        {loading && !state ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={colors.brass} />
+          </View>
+        ) : state && state.status !== "NOT_STARTED" ? (
           <ActiveHome nowMs={nowMs} />
+        ) : (
+          <NotStarted onStart={() => router.push("/(app)/select-activities")} />
         )}
       </View>
 
@@ -347,6 +356,11 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: "uppercase",
     color: colors.brass,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   hero: {
     fontFamily: fonts.display,
