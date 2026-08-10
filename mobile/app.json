@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "liberated",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "backgroundColor": "#01332F"
     },
@@ -34,7 +33,8 @@
           "photosPermission": "Liberated lets you attach a photo as private proof. It stays only on your device.",
           "cameraPermission": "Liberated uses the camera to privately capture proof of your task."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "apiBaseUrl": "http://localhost:8080",

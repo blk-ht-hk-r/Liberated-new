@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -13,7 +19,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { Audio } from "expo-av";
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+} from "expo-audio";
 import { Button } from "@/components/Button";
 import { PrivacyBanner } from "@/components/PrivacyBanner";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -80,32 +90,30 @@ export default function TrackActivity() {
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const nowMs = useNow(timerStart ? 1000 : 60000);
 
-  const gongRef = useRef<Audio.Sound | null>(null);
+  const gongRef = useRef<AudioPlayer | null>(null);
   const closingGongPlayedRef = useRef(false);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {});
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     return () => {
-      gongRef.current?.unloadAsync().catch(() => {});
+      gongRef.current?.remove();
       gongRef.current = null;
     };
   }, []);
 
   const playGong = useCallback(async () => {
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        require("../../../assets/sounds/gong.mp3"),
-        { shouldPlay: true },
-      );
-      gongRef.current = sound;
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-          if (gongRef.current === sound) gongRef.current = null;
+      const player = createAudioPlayer(require("../../assets/sounds/gong.mp3"));
+      gongRef.current = player;
+      player.play();
+      player.addListener("playbackStatusUpdate", (status) => {
+        if (status.didJustFinish) {
+          player.remove();
+          if (gongRef.current === player) gongRef.current = null;
         }
       });
     } catch {
-      // Sound is a gentle enhancement; ignore playback failures.
+      /* Sound is a gentle enhancement; ignore playback failures. */
     }
   }, []);
 
