@@ -103,7 +103,9 @@ export default function TrackActivity() {
 
   const playGong = useCallback(async () => {
     try {
-      const player = createAudioPlayer(require("../../assets/sounds/gong.mp3"));
+      const player = createAudioPlayer(
+        require("../../../assets/sounds/gong.mp3"),
+      );
       gongRef.current = player;
       player.play();
       player.addListener("playbackStatusUpdate", (status) => {
