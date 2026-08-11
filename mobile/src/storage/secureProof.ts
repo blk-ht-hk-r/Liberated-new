@@ -1,5 +1,5 @@
 import * as SecureStore from "@/storage/secureStore";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { ProofType } from "@/types";
 
 /**
@@ -64,8 +64,13 @@ async function persistImage(
   sourceUri: string,
 ): Promise<string> {
   await ensureDir();
-  const ext = sourceUri.split(".").pop()?.split("?")[0] || "jpg";
+
+  const stripped = sourceUri.split("#")[0].split("?")[0];
+  const candidate = stripped.split(".").pop() ?? "";
+  const ext = /^[a-zA-Z0-9]{1,5}$/.test(candidate) ? candidate : "jpg";
   const dest = `${PROOF_DIR}${activityId}_${date}.${ext}`;
+
+  await FileSystem.deleteAsync(dest, { idempotent: true }).catch(() => {});
   await FileSystem.copyAsync({ from: sourceUri, to: dest });
   return dest;
 }

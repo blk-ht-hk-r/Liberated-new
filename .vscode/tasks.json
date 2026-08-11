@@ -5,13 +5,15 @@
       "label": "Run Backend",
       "type": "shell",
       "command": "mvn",
-      "args": ["-Dspring-boot.run.profiles=local", "spring-boot:run"],
+      "windows": {
+        "command": "mvn.cmd"
+      },
+      "args": [
+        "-Dspring-boot.run.profiles=local",
+        "spring-boot:run"
+      ],
       "options": {
-        "cwd": "${workspaceFolder}/backend",
-        "shell": {
-          "executable": "cmd.exe",
-          "args": ["/c"]
-        }
+        "cwd": "${workspaceFolder}/backend"
       },
       "isBackground": true,
       "problemMatcher": [],
@@ -29,7 +31,9 @@
       "label": "Run Frontend",
       "type": "shell",
       "command": "npm",
-      "args": ["start"],
+      "args": [
+        "start"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/mobile"
       },
@@ -44,7 +48,10 @@
     },
     {
       "label": "Run Both",
-      "dependsOn": ["Run Backend", "Run Frontend"],
+      "dependsOn": [
+        "Run Backend",
+        "Run Frontend"
+      ],
       "dependsOrder": "parallel",
       "group": {
         "kind": "build",

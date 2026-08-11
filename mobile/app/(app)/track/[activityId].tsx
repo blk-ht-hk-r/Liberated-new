@@ -284,7 +284,7 @@ export default function TrackActivity() {
       await completeToday();
       router.replace("/(app)/home");
     } catch (e) {
-      setError("Could not save. Please try again.");
+      setError(String(e));
     } finally {
       setSubmitting(false);
     }

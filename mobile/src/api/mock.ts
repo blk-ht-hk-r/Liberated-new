@@ -176,23 +176,22 @@ export function mockStartState(activityIds: number[]): ChallengeState {
 /** Advance the mock challenge by marking today complete. */
 export function mockCompleteToday(prev: ChallengeState): ChallengeState {
   if (prev.status !== "ACTIVE" || prev.todayCompleted) return prev;
+
   const completedDays = prev.completedDays + 1;
-  const nextIndex = prev.currentDayIndex + 1;
   const finished = completedDays >= prev.totalDays;
   const days = prev.days.map((d) =>
     d.dayIndex === prev.currentDayIndex
       ? { ...d, completed: true, completedAt: new Date().toISOString() }
       : d,
   );
+
   return {
     ...prev,
     days,
     completedDays,
-    currentDayIndex: finished ? prev.currentDayIndex : nextIndex,
+    currentDayIndex: prev.currentDayIndex,
     todayCompleted: true,
-    todayActivity: finished
-      ? prev.todayActivity
-      : (prev.selectedActivities[nextIndex] ?? prev.todayActivity),
+    todayActivity: prev.todayActivity,
     status: finished ? "COMPLETED" : "ACTIVE",
     showCompletionPopup: finished,
   };

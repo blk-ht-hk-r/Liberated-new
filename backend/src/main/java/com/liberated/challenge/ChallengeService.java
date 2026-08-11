@@ -227,16 +227,24 @@ public class ChallengeService {
                 .toList();
 
         int completedDays = (int) countCompleted(challenge);
-        int currentDayIndex = Math.min(completedDays, challenge.getBaseDays() - 1);
+        ZoneId zone = ZoneId.of(challenge.getTimezone());
+        LocalDate today = now.atZone(zone).toLocalDate();
+        DayLog todayLog = challenge.getDayLogs().stream()
+                .filter(dl -> dl.getDueDate().equals(today))
+                .findFirst()
+                .orElse(null);
+
+        int currentDayIndex = todayLog != null
+                ? Math.min(todayLog.getDayIndex(), challenge.getBaseDays() - 1)
+                : Math.min(completedDays, challenge.getBaseDays() - 1);
 
         ActivityView todayActivity = null;
         if (challenge.getStatus() == ChallengeStatus.ACTIVE
-                && completedDays < selectedViews.size()) {
-            todayActivity = selectedViews.get(completedDays);
+                && currentDayIndex >= 0
+                && currentDayIndex < selectedViews.size()) {
+            todayActivity = selectedViews.get(currentDayIndex);
         }
 
-        ZoneId zone = ZoneId.of(challenge.getTimezone());
-        LocalDate today = now.atZone(zone).toLocalDate();
         boolean todayCompleted = challenge.getDayLogs().stream()
                 .anyMatch(dl -> dl.getDueDate().equals(today) && dl.isCompleted());
 
