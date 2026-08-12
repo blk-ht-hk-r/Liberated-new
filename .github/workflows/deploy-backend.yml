@@ -1,0 +1,43 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: liberated-backend
+          region: us-central1
+          source: ./backend
+          env:
+            SPRING_PROFILES_ACTIVE: prod
+            GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+            LIBERATED_JWT_SECRET: ${{ secrets.LIBERATED_JWT_SECRET }}
+          allow_unauthenticated: true
