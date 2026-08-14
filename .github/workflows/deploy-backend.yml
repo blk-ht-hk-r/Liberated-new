@@ -33,12 +33,12 @@ jobs:
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
+        env:
+          SPRING_PROFILES_ACTIVE: prod
+          GOOGLE_CLIENT_ID: 678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com
+          LIBERATED_JWT_SECRET: ${{ secrets.LIBERATED_JWT_SECRET }}
         with:
           service: liberated-backend
           region: us-central1
           source: ./backend
-          env:
-            SPRING_PROFILES_ACTIVE: prod
-            GOOGLE_CLIENT_ID: 678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com
-            LIBERATED_JWT_SECRET: ${{ secrets.LIBERATED_JWT_SECRET }}
           allow_unauthenticated: true
