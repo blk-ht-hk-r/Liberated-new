@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -23,7 +23,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: projects/678040958972/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: service-account-liberated@project-182f8434-cdcf-4c64-8aa.iam.gserviceaccount.com
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -38,6 +39,6 @@ jobs:
           source: ./backend
           env:
             SPRING_PROFILES_ACTIVE: prod
-            GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_ID: 678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com
             LIBERATED_JWT_SECRET: ${{ secrets.LIBERATED_JWT_SECRET }}
           allow_unauthenticated: true
