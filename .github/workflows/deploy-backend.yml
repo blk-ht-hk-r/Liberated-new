@@ -41,5 +41,5 @@ jobs:
           service: liberated-backend
           region: us-central1
           source: ./backend
-          flags: '--build-service-account=projects/678040958972/serviceAccounts/service-account-liberated@project-182f8434-cdcf-4c64-8aa.iam.gserviceaccount.com'
+          # flags: '--build-service-account=projects/678040958972/serviceAccounts/service-account-liberated@project-182f8434-cdcf-4c64-8aa.iam.gserviceaccount.com'
           allow_unauthenticated: true
