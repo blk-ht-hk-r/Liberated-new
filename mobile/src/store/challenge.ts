@@ -4,6 +4,7 @@ import {
   isOffline,
   MOCK_ACTIVITIES,
   mockCompleteToday,
+  mockAdvanceDay,
   mockNotStartedState,
   mockStartState,
 } from "@/api/mock";
@@ -20,6 +21,8 @@ interface ChallengeStore {
   startChallenge: (activityIds: number[]) => Promise<void>;
   completeToday: () => Promise<void>;
   acknowledgePopups: () => Promise<void>;
+  advanceDay: () => Promise<void>;
+  completeChallengeDev: () => Promise<void>;
   changeTodayActivity: (activityId: number) => Promise<void>;
   reset: () => void;
 }
@@ -112,6 +115,20 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       "/api/challenge/acknowledge-popups",
     );
     set({ state: data });
+  },
+
+  advanceDay: async () => {
+    if (isOffline()) {
+      set((s) => ({ state: s.state ? mockAdvanceDay(s.state) : s.state }));
+      return;
+    }
+    // No-op when online for now.
+  },
+  completeChallengeDev: async () => {
+    if (isOffline()) {
+      set((s) => ({ state: s.state ? mockCompleteToday(s.state) : s.state }));
+      return;
+    }
   },
 
   changeTodayActivity: async (activityId) => {

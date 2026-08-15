@@ -196,3 +196,53 @@ export function mockCompleteToday(prev: ChallengeState): ChallengeState {
     showCompletionPopup: finished,
   };
 }
+
+/**
+ * Dev helper: advance the mock challenge by one calendar day.
+ * - If not ACTIVE, returns unchanged.
+ * - If today was not completed, adds a penalty day (totalDays++, extraDays++).
+ * - Advances the currentDayIndex and rotates the todayActivity.
+ * - Moves the clock back one day so elapsed time advances.
+ */
+export function mockAdvanceDay(prev: ChallengeState): ChallengeState {
+  if (prev.status !== "ACTIVE") return prev;
+
+  const missed = prev.todayCompleted ? 0 : 1;
+  let totalDays = prev.totalDays;
+  let extraDays = prev.extraDays;
+  if (missed > 0) {
+    totalDays = prev.totalDays + 1;
+    extraDays = prev.extraDays + 1;
+  }
+
+  const nextIndex = prev.currentDayIndex + 1;
+
+  if (prev.completedDays >= totalDays) {
+    return {
+      ...prev,
+      totalDays,
+      extraDays,
+      status: "COMPLETED",
+      showCompletionPopup: true,
+    };
+  }
+
+  const sel = prev.selectedActivities;
+  const nextActivity = sel.length ? sel[nextIndex % sel.length] : null;
+
+  const startedAt = prev.startedAt
+    ? new Date(new Date(prev.startedAt).getTime() - 86400000).toISOString()
+    : prev.startedAt;
+
+  return {
+    ...prev,
+    startedAt,
+    totalDays,
+    extraDays,
+    currentDayIndex: nextIndex,
+    todayActivity: nextActivity,
+    todayCompleted: false,
+    showFailurePopup: missed > 0,
+    missedCountJustEvaluated: missed,
+  };
+}

@@ -17,6 +17,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAuth } from "@/store/auth";
 import { useChallenge } from "@/store/challenge";
 import { useNow, formatElapsedFull, formatUntilMidnight } from "@/hooks/time";
+import { isOffline } from "@/api/mock";
 import {
   categoryColors,
   categoryEmojis,
@@ -146,6 +147,8 @@ function NotStarted({ onStart }: { onStart: () => void }) {
 function ActiveHome({ nowMs }: { nowMs: number }) {
   const router = useRouter();
   const state = useChallenge((s) => s.state)!;
+  const advanceDay = useChallenge((s) => s.advanceDay);
+  const completeChallengeDev = useChallenge((s) => s.completeChallengeDev);
 
   const elapsed = useMemo(
     () => formatElapsedFull(state.startedAt, nowMs),
@@ -229,6 +232,16 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
         <Text style={styles.countdown}>{untilMidnight} remaining</Text>
         <Text style={styles.countdownLabel}>Countdown to midnight</Text>
       </View>
+      {isOffline() ? (
+        <View style={styles.devRow}>
+          <Pressable onPress={() => advanceDay()} style={styles.skipButton}>
+            <Text style={styles.skipText}>⏭ Skip to next day (dev)</Text>
+          </Pressable>
+          <Pressable onPress={() => completeChallengeDev()} style={styles.devButtonSecondary}>
+            <Text style={styles.devTextSecondary}>✅ Complete today (dev)</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -312,6 +325,40 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: 13,
     color: colors.brass,
+  },
+  skipButton: {
+    alignSelf: "center",
+    marginTop: spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    backgroundColor: colors.paperElevated,
+  },
+  skipText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.brass,
+  },
+  devRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "center",
+    marginTop: spacing.md,
+  },
+  devButtonSecondary: {
+    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    backgroundColor: colors.paperElevated,
+  },
+  devTextSecondary: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.brassDeep,
   },
   taskTag: {
     fontFamily: fonts.bodySemiBold,
