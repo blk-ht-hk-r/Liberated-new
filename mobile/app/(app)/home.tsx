@@ -194,6 +194,19 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
             <Text style={styles.taskTag}>
               {categoryEmojis[today.category]} {categoryLabels[today.category]}
             </Text>
+            {!done ? (
+              <Pressable
+                hitSlop={10}
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  router.push(`/(app)/select-activities?mode=edit`);
+                }}
+                style={styles.changeButton}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.brass} />
+                <Text style={styles.changeText}>Change</Text>
+              </Pressable>
+            ) : null}
           </View>
           <Text style={styles.taskTitle}>{today.title}</Text>
           <Text style={styles.taskDesc}>{today.description}</Text>
@@ -288,6 +301,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.sm,
+  },
+  changeButton: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  changeText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 13,
+    color: colors.brass,
   },
   taskTag: {
     fontFamily: fonts.bodySemiBold,

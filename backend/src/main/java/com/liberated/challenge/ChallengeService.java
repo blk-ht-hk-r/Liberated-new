@@ -136,6 +136,34 @@ public class ChallengeService {
         return buildState(challenge, Instant.now(), false);
     }
 
+    @Transactional
+    public ChallengeStateView changeTodayActivity(Long userId, Long activityId) {
+        Challenge challenge = requireActive(userId);
+        Instant now = Instant.now();
+        evaluate(challenge, now);
+
+        ZoneId zone = ZoneId.of(challenge.getTimezone());
+        LocalDate today = LocalDate.now(zone);
+        DayLog todayLog = ensureDayLog(challenge, today);
+
+        if (todayLog.isCompleted()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Today's activity already completed");
+        }
+
+        if (!activityRepository.existsById(activityId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown activity id: " + activityId);
+        }
+
+        int idx = todayLog.getDayIndex();
+        if (idx < 0 || idx >= challenge.getSelectedActivityIds().size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid day index");
+        }
+
+        challenge.getSelectedActivityIds().set(idx, activityId);
+        challengeRepository.save(challenge);
+        return buildState(challenge, now, false);
+    }
+
     // --- core evaluation ----------------------------------------------------
 
     /**

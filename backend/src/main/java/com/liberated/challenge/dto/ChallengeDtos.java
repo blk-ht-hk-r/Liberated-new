@@ -30,6 +30,10 @@ public class ChallengeDtos {
                         int dayIndex) {
         }
 
+        public record ChangeActivityRequest(
+                        Long activityId) {
+        }
+
         public record DayView(
                         int dayIndex,
                         String dueDate,

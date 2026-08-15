@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Button } from "@/components/Button";
 import { ActivityTile } from "@/components/ActivityTile";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -13,7 +13,10 @@ const REQUIRED = 7;
 
 export default function SelectActivities() {
   const router = useRouter();
-  const { activities, fetchActivities, startChallenge } = useChallenge();
+  const params = useLocalSearchParams();
+  const mode = (params as any).mode as string | undefined;
+  const isEdit = mode === "edit";
+  const { activities, fetchActivities, startChallenge, changeTodayActivity, state } = useChallenge();
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +25,18 @@ export default function SelectActivities() {
     fetchActivities().catch(() => setError("Could not load activities"));
   }, [fetchActivities]);
 
+  useEffect(() => {
+    if (isEdit && state) {
+      const todayId = state.todayActivity?.id;
+      setSelected(todayId ? [todayId] : []);
+    }
+  }, [isEdit, state]);
+
   const toggle = (id: number) => {
+    if (isEdit) {
+      setSelected([id]);
+      return;
+    }
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= REQUIRED) return prev;
@@ -32,13 +46,21 @@ export default function SelectActivities() {
 
   const remaining = REQUIRED - selected.length;
   const canStart = selected.length === REQUIRED;
+  const selectedId = selected[0];
+  const isDifferentFromToday = isEdit && state && selectedId != null && selectedId !== state.todayActivity?.id;
 
   const start = async () => {
     setError(null);
     setLoading(true);
     try {
-      await startChallenge(selected);
-      router.replace("/(app)/home");
+      if (isEdit) {
+        if (selectedId == null) return;
+        await changeTodayActivity(selectedId);
+        router.back();
+      } else {
+        await startChallenge(selected);
+        router.replace("/(app)/home");
+      }
     } catch (e) {
       setError(apiErrorMessage(e));
     } finally {
@@ -61,20 +83,30 @@ export default function SelectActivities() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.title}>Select Your Activities</Text>
-          <Text style={styles.subtitle}>
-            {selected.length}/{REQUIRED} selected
-          </Text>
+          {!isEdit ? (
+            <Text style={styles.subtitle}>
+              {selected.length}/{REQUIRED} selected
+            </Text>
+          ) : (
+            <Text style={styles.subtitle}>Change today's task</Text>
+          )}
 
           <View style={styles.grid}>
             {activities.map((a) => {
               const isSelected = selected.includes(a.id);
+              const usedIds = state?.selectedActivities
+                .slice(0, state.completedDays)
+                .map((x) => x.id || 0) ?? [];
+              const disabled = isEdit
+                ? usedIds.includes(a.id) && a.id !== state?.todayActivity?.id
+                : !isSelected && selected.length >= REQUIRED;
               return (
                 <View key={a.id} style={styles.cell}>
                   <ActivityTile
                     label={a.title}
                     category={a.category}
                     selected={isSelected}
-                    disabled={!isSelected && selected.length >= REQUIRED}
+                    disabled={disabled}
                     onPress={() => toggle(a.id)}
                   />
                 </View>
@@ -87,14 +119,18 @@ export default function SelectActivities() {
 
         <View style={styles.footer}>
           <Text style={styles.counter}>
-            {canStart
+            {isEdit
+              ? isDifferentFromToday
+                ? "Ready to switch"
+                : "Pick a different activity"
+              : canStart
               ? "You're ready. Seven chosen."
               : `Pick ${remaining} more ${remaining === 1 ? "thing" : "things"}`}
           </Text>
           <Button
-            label="Begin the 7 days"
+            label={isEdit ? "Save change" : "Begin the 7 days"}
             onPress={start}
-            disabled={!canStart}
+            disabled={isEdit ? !isDifferentFromToday : !canStart}
             loading={loading}
           />
         </View>

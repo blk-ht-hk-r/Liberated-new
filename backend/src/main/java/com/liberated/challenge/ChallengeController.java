@@ -51,6 +51,12 @@ public class ChallengeController {
         return challengeService.acknowledgePopups(userId);
     }
 
+    @PostMapping("/challenge/change-activity")
+    public ChallengeStateView changeActivity(@AuthenticationPrincipal Long userId,
+            @RequestBody ChangeActivityRequest req) {
+        return challengeService.changeTodayActivity(userId, req.activityId());
+    }
+
     private ActivityView toView(Activity a) {
         return new ActivityView(a.getId(), a.getTitle(), a.getDescription(),
                 a.getCategory(), a.getProofType(), a.getTrackingConfig());

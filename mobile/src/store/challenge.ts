@@ -20,6 +20,7 @@ interface ChallengeStore {
   startChallenge: (activityIds: number[]) => Promise<void>;
   completeToday: () => Promise<void>;
   acknowledgePopups: () => Promise<void>;
+  changeTodayActivity: (activityId: number) => Promise<void>;
   reset: () => void;
 }
 
@@ -110,6 +111,32 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
     const { data } = await api.post<ChallengeState>(
       "/api/challenge/acknowledge-popups",
     );
+    set({ state: data });
+  },
+
+  changeTodayActivity: async (activityId) => {
+    if (isOffline()) {
+      set((s) => {
+        if (!s.state) return {} as any;
+        const prev = s.state;
+        if (prev.todayCompleted) return {} as any;
+        const idx = prev.currentDayIndex;
+        const replacement = MOCK_ACTIVITIES.find((x) => x.id === activityId) ?? null;
+        const newSelected = prev.selectedActivities.map((a, i) => (i === idx ? replacement : a));
+        return {
+          state: {
+            ...prev,
+            selectedActivities: newSelected,
+            todayActivity: newSelected[idx] ?? prev.todayActivity,
+          },
+        } as any;
+      });
+      return;
+    }
+
+    const { data } = await api.post<ChallengeState>("/api/challenge/change-activity", {
+      activityId,
+    });
     set({ state: data });
   },
 }));
