@@ -28,6 +28,7 @@ import { Button } from "@/components/Button";
 import { PrivacyBanner } from "@/components/PrivacyBanner";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useChallenge } from "@/store/challenge";
+import { useAuth } from "@/store/auth";
 import {
   getProof,
   saveProof,
@@ -45,7 +46,7 @@ import {
   radius,
   shadow,
   spacing,
-  type,
+  type
 } from "@/theme";
 import { useNow } from "@/hooks/time";
 
@@ -119,14 +120,21 @@ export default function TrackActivity() {
     }
   }, []);
 
+  const userId = useAuth((s) => s.userId);
+
   useEffect(() => {
     (async () => {
-      await purgeOldProof(today);
-      const found = await getProof(id, today);
+      if (userId == null) {
+        setExisting(null);
+        setLoading(false);
+        return;
+      }
+      await purgeOldProof(userId, today);
+      const found = await getProof(userId, id, today);
       setExisting(found);
       setLoading(false);
     })();
-  }, [id, today]);
+  }, [id, today, userId]);
 
   // Sound the closing gong 1 min before the end (so it finishes at the target),
   // then stop the timer exactly at the target.
@@ -263,7 +271,9 @@ export default function TrackActivity() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await saveProof({
+      if (userId == null) throw new Error("Not signed in");
+
+      await saveProof(userId, {
         activityId: id,
         proofType: activity.proofType,
         date: today,

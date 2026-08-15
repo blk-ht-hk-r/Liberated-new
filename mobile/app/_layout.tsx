@@ -38,8 +38,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     bootstrap();
-    // Purge any private proof left over from previous days on launch.
-    purgeOldProof(localDateString()).catch(() => {});
+    // Purge any private proof left over from previous days on launch (per-user).
+    const userId = useAuth.getState().userId;
+    if (userId != null) purgeOldProof(userId, localDateString()).catch(() => {});
   }, [bootstrap]);
 
   useEffect(() => {
