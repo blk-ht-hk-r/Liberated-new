@@ -173,12 +173,15 @@ export function mockStartState(activityIds: number[]): ChallengeState {
   };
 }
 
-/** Advance the mock challenge by marking today complete. */
+/** Mark today's task complete. Does NOT finish the challenge — completion is
+ *  evaluated at the end of the day (see mockAdvanceDay), matching the backend
+ *  model where the challenge completes once baseDays tasks are done. */
 export function mockCompleteToday(prev: ChallengeState): ChallengeState {
   if (prev.status !== "ACTIVE" || prev.todayCompleted) return prev;
+  // Never record more completed tasks than the challenge requires.
+  if (prev.completedDays >= prev.baseDays) return prev;
 
   const completedDays = prev.completedDays + 1;
-  const finished = completedDays >= prev.totalDays;
   const days = prev.days.map((d) =>
     d.dayIndex === prev.currentDayIndex
       ? { ...d, completed: true, completedAt: new Date().toISOString() }
@@ -189,23 +192,31 @@ export function mockCompleteToday(prev: ChallengeState): ChallengeState {
     ...prev,
     days,
     completedDays,
-    currentDayIndex: prev.currentDayIndex,
     todayCompleted: true,
-    todayActivity: prev.todayActivity,
-    status: finished ? "COMPLETED" : "ACTIVE",
-    showCompletionPopup: finished,
   };
 }
 
 /**
- * Dev helper: advance the mock challenge by one calendar day.
+ * Dev helper: end the current day and roll into the next one.
  * - If not ACTIVE, returns unchanged.
- * - If today was not completed, adds a penalty day (totalDays++, extraDays++).
- * - Advances the currentDayIndex and rotates the todayActivity.
- * - Moves the clock back one day so elapsed time advances.
+ * - End-of-day completion: if all baseDays tasks are done, the challenge
+ *   finishes now (not the instant the last task was logged).
+ * - If today's task was not completed, adds a penalty day (totalDays++,
+ *   extraDays++) and queues the failure popup.
+ * - Otherwise advances currentDayIndex, rotates the task, and moves the clock
+ *   back one day so elapsed time keeps climbing.
  */
 export function mockAdvanceDay(prev: ChallengeState): ChallengeState {
   if (prev.status !== "ACTIVE") return prev;
+
+  // The day is over. If every required task is done, complete the challenge.
+  if (prev.completedDays >= prev.baseDays) {
+    return {
+      ...prev,
+      status: "COMPLETED",
+      showCompletionPopup: true,
+    };
+  }
 
   const missed = prev.todayCompleted ? 0 : 1;
   let totalDays = prev.totalDays;

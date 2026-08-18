@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import ConfettiCannon from "react-native-confetti-cannon";
 import { Button } from "@/components/Button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { MessageModal } from "@/components/MessageModal";
@@ -41,8 +42,10 @@ export default function Home() {
   const quoteShown = useAuth((s) => s.quoteShown);
   const markQuoteShown = useAuth((s) => s.markQuoteShown);
 
-  const { state, loading, fetchState, acknowledgePopups } = useChallenge();
+  const { state, loading, fetchState, acknowledgePopups, reset } =
+    useChallenge();
   const [showQuote, setShowQuote] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const nowMs = useNow();
 
   useEffect(() => {
@@ -60,6 +63,11 @@ export default function Home() {
     markQuoteShown();
   };
 
+  const celebrate = () => {
+    setShowConfetti(true);
+    acknowledgePopups();
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader
@@ -74,6 +82,8 @@ export default function Home() {
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={colors.brass} />
           </View>
+        ) : state && state.status === "COMPLETED" ? (
+          <CompletedHome onRestart={reset} />
         ) : state && state.status !== "NOT_STARTED" ? (
           <ActiveHome nowMs={nowMs} />
         ) : (
@@ -116,8 +126,18 @@ export default function Home() {
         title="You are Liberated."
         body="Seven days without the scroll, seven things you actually did. Notice how that feels — that feeling was always available to you. Carry it forward."
         primaryLabel="Celebrate"
-        onPrimary={acknowledgePopups}
+        onPrimary={celebrate}
       />
+
+      {showConfetti ? (
+        <ConfettiCannon
+          count={150}
+          origin={{ x: -10, y: 0 }}
+          fadeOut
+          autoStart
+          onAnimationEnd={() => setShowConfetti(false)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -144,6 +164,41 @@ function NotStarted({ onStart }: { onStart: () => void }) {
   );
 }
 
+function CompletedHome({ onRestart }: { onRestart: () => void }) {
+  const state = useChallenge((s) => s.state)!;
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.wordmark}>LIBERATED</Text>
+
+      <Text style={styles.progressLabel}>
+        Progress: {state.totalDays} / {state.totalDays} Days
+      </Text>
+      <View style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}>
+        <ProgressBar total={state.totalDays} completed={state.totalDays} />
+      </View>
+
+      <View style={styles.completedWrap}>
+        <View style={styles.blob}>
+          <Ionicons name="sparkles" size={44} color={colors.brass} />
+        </View>
+        <Text style={styles.eyebrow}>Challenge complete</Text>
+        <Text style={styles.hero}>You are Liberated.</Text>
+        <Text style={styles.heroBody}>
+          You finished all {state.totalDays} days. Come back soon — new features
+          are on the way.
+        </Text>
+        <Pressable onPress={onRestart} style={styles.restartButton}>
+          <Ionicons name="refresh" size={16} color={colors.brass} />
+          <Text style={styles.restartText}>Start again</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
 function ActiveHome({ nowMs }: { nowMs: number }) {
   const router = useRouter();
   const state = useChallenge((s) => s.state)!;
@@ -158,6 +213,9 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
   const today = state.todayActivity;
   const done = state.todayCompleted;
 
+  const progress =
+    state.status === "COMPLETED" ? state.totalDays : state.currentDayIndex;
+
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -166,10 +224,10 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
       <Text style={styles.wordmark}>LIBERATED</Text>
 
       <Text style={styles.progressLabel}>
-        Progress: {state.completedDays} / {state.totalDays} Days Completed
+        Progress: {progress} / {state.totalDays} Days
       </Text>
       <View style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}>
-        <ProgressBar total={state.totalDays} completed={state.completedDays} />
+        <ProgressBar total={state.totalDays} completed={progress} />
       </View>
 
       <View style={styles.statBlock}>
