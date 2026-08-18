@@ -13,7 +13,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +31,10 @@ import java.util.Map;
  * <li>A calendar day that passes (local midnight) without completion is a miss:
  * it adds
  * one penalty day ({@code extraDays}) and queues a failure popup.</li>
- * <li>Challenge is COMPLETED once {@code baseDays} tasks are done.</li>
+ * <li>Challenge is COMPLETED at the end of the day on which the final
+ * ({@code baseDays}-th) task is completed - i.e. once the local date has rolled
+ * past that day. Finishing the last task does not complete the challenge
+ * instantly.</li>
  * </ul>
  * No private proof content is ever stored here - only booleans/timestamps.
  */
@@ -40,6 +45,7 @@ public class ChallengeService {
     private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
     private final PushService pushService;
+    private volatile Instant testNowOverride = null;
 
     public ChallengeService(ChallengeRepository challengeRepository,
             ActivityRepository activityRepository,
@@ -49,6 +55,37 @@ public class ChallengeService {
         this.activityRepository = activityRepository;
         this.userRepository = userRepository;
         this.pushService = pushService;
+    }
+
+    // --- test clock (dev only) ---------------------------------------------
+    // When set (via the local-profile dev endpoint), the whole service treats
+    // this instant as "now", so every day-math path (evaluate, completeToday,
+    // rollover, buildState) can be advanced day-by-day without touching the OS
+    // clock. Null in production => real time. Volatile: set from a request
+    // thread, read by the scheduler thread.
+
+    /** Current time, honoring the dev test-clock override when present. */
+    private Instant now() {
+        return testNowOverride != null ? testNowOverride : Instant.now();
+    }
+
+    /** Local date "today" in the given zone, honoring the test clock. */
+    private LocalDate today(ZoneId zone) {
+        return now().atZone(zone).toLocalDate();
+    }
+
+    /** Dev only: pin "today" to the given date (noon UTC). Null clears it. */
+    public void setTestDate(LocalDate date) {
+        this.testNowOverride = (date == null)
+                ? null
+                : date.atTime(12, 0).atZone(ZoneOffset.UTC).toInstant();
+    }
+
+    /** Dev only: current override date, or null when running on the real clock. */
+    public LocalDate getTestDate() {
+        return testNowOverride == null
+                ? null
+                : testNowOverride.atZone(ZoneOffset.UTC).toLocalDate();
     }
 
     @Transactional
@@ -71,18 +108,18 @@ public class ChallengeService {
 
         Challenge challenge = new Challenge();
         challenge.setUserId(userId);
-        challenge.setStartedAt(Instant.now());
+        challenge.setStartedAt(now());
         challenge.setBaseDays(ids.size());
         challenge.setStatus(ChallengeStatus.ACTIVE);
         challenge.setTimezone(sanitizeZone(req.timezone()));
         challenge.getSelectedActivityIds().addAll(ids);
 
         // Seed day 0 for the start date.
-        LocalDate startDate = LocalDate.now(ZoneId.of(challenge.getTimezone()));
+        LocalDate startDate = today(ZoneId.of(challenge.getTimezone()));
         challenge.getDayLogs().add(new DayLog(challenge, 0, startDate));
 
         challengeRepository.save(challenge);
-        return buildState(challenge, Instant.now(), false);
+        return buildState(challenge, now(), false);
     }
 
     @Transactional
@@ -92,19 +129,19 @@ public class ChallengeService {
         if (challenge == null) {
             return notStartedView();
         }
-        evaluate(challenge, Instant.now());
+        evaluate(challenge, now());
         challengeRepository.save(challenge);
-        return buildState(challenge, Instant.now(), false);
+        return buildState(challenge, now(), false);
     }
 
     @Transactional
     public ChallengeStateView completeToday(Long userId) {
         Challenge challenge = requireActive(userId);
-        Instant now = Instant.now();
+        Instant now = now();
         evaluate(challenge, now);
 
         ZoneId zone = ZoneId.of(challenge.getTimezone());
-        LocalDate today = LocalDate.now(zone);
+        LocalDate today = today(zone);
         DayLog todayLog = ensureDayLog(challenge, today);
 
         if (!todayLog.isCompleted()) {
@@ -112,15 +149,9 @@ public class ChallengeService {
             todayLog.setCompletedAt(now);
         }
 
-        // Completing the final task finishes the challenge.
-        long completed = countCompleted(challenge);
-        if (completed >= challenge.getBaseDays()
-                && challenge.getStatus() == ChallengeStatus.ACTIVE) {
-            challenge.setStatus(ChallengeStatus.COMPLETED);
-            challenge.setCompletedAt(now);
-            challenge.setPendingCompletion(true);
-        }
-
+        // Completion is deferred to end-of-day (see evaluate): finishing the
+        // final task does NOT immediately complete the challenge. The rollover
+        // job / next fetch after local midnight flips the status to COMPLETED.
         challengeRepository.save(challenge);
         return buildState(challenge, now, false);
     }
@@ -133,17 +164,17 @@ public class ChallengeService {
         challenge.setPendingFailureDays(0);
         challenge.setPendingCompletion(false);
         challengeRepository.save(challenge);
-        return buildState(challenge, Instant.now(), false);
+        return buildState(challenge, now(), false);
     }
 
     @Transactional
     public ChallengeStateView changeTodayActivity(Long userId, Long activityId) {
         Challenge challenge = requireActive(userId);
-        Instant now = Instant.now();
+        Instant now = now();
         evaluate(challenge, now);
 
         ZoneId zone = ZoneId.of(challenge.getTimezone());
-        LocalDate today = LocalDate.now(zone);
+        LocalDate today = today(zone);
         DayLog todayLog = ensureDayLog(challenge, today);
 
         if (todayLog.isCompleted()) {
@@ -208,11 +239,22 @@ public class ChallengeService {
             challenge.setPendingFailureDays(challenge.getPendingFailureDays() + newMisses);
         }
 
+        // End-of-day completion: once all base tasks are done, the challenge
+        // completes only after the local day on which the final task was logged
+        // has ended (today has rolled past that day). This runs on fetch and on
+        // the hourly rollover job, so it fires right after local midnight.
         if (countCompleted(challenge) >= challenge.getBaseDays()) {
-            challenge.setStatus(ChallengeStatus.COMPLETED);
-            if (challenge.getCompletedAt() == null) {
-                challenge.setCompletedAt(now);
-                challenge.setPendingCompletion(true);
+            LocalDate lastCompletedDate = challenge.getDayLogs().stream()
+                    .filter(DayLog::isCompleted)
+                    .map(DayLog::getDueDate)
+                    .max(Comparator.naturalOrder())
+                    .orElse(null);
+            if (lastCompletedDate != null && today.isAfter(lastCompletedDate)) {
+                challenge.setStatus(ChallengeStatus.COMPLETED);
+                if (challenge.getCompletedAt() == null) {
+                    challenge.setCompletedAt(now);
+                    challenge.setPendingCompletion(true);
+                }
             }
         }
     }
@@ -262,19 +304,36 @@ public class ChallengeService {
                 .findFirst()
                 .orElse(null);
 
+        boolean todayCompleted = challenge.getDayLogs().stream()
+                .anyMatch(dl -> dl.getDueDate().equals(today) && dl.isCompleted());
+
+        // Progress bar tracks calendar days elapsed (capped to the base window).
         int currentDayIndex = todayLog != null
                 ? Math.min(todayLog.getDayIndex(), challenge.getBaseDays() - 1)
                 : Math.min(completedDays, challenge.getBaseDays() - 1);
 
+        // Uncapped elapsed-day count (1-based) for the progress bar, capped only
+        // at totalDays. Unlike currentDayIndex (pinned to baseDays for activity
+        // selection), this advances through penalty-extended days so the bar
+        // reads e.g. 8/9 instead of freezing at 6/9.
+        int daysElapsed = todayLog != null
+                ? Math.min(todayLog.getDayIndex(), challenge.getTotalDays())
+                : Math.min(completedDays, challenge.getTotalDays());
+
+        // Today's task is the NEXT UNCOMPLETED activity - so a skipped day keeps
+        // showing the same task the user skipped until they complete it, and
+        // penalty-extended days never repeat a later activity. If today is
+        // already completed, keep showing the task they just finished.
+        int activityIdx = todayCompleted
+                ? Math.min(completedDays - 1, challenge.getBaseDays() - 1)
+                : Math.min(completedDays, challenge.getBaseDays() - 1);
+
         ActivityView todayActivity = null;
         if (challenge.getStatus() == ChallengeStatus.ACTIVE
-                && currentDayIndex >= 0
-                && currentDayIndex < selectedViews.size()) {
-            todayActivity = selectedViews.get(currentDayIndex);
+                && activityIdx >= 0
+                && activityIdx < selectedViews.size()) {
+            todayActivity = selectedViews.get(activityIdx);
         }
-
-        boolean todayCompleted = challenge.getDayLogs().stream()
-                .anyMatch(dl -> dl.getDueDate().equals(today) && dl.isCompleted());
 
         List<DayView> dayViews = new ArrayList<>();
         for (DayLog dl : challenge.getDayLogs()) {
@@ -291,6 +350,7 @@ public class ChallengeService {
                 challenge.getExtraDays(),
                 completedDays,
                 currentDayIndex,
+                daysElapsed,
                 todayActivity,
                 todayCompleted,
                 dayViews,
@@ -303,7 +363,7 @@ public class ChallengeService {
     private ChallengeStateView notStartedView() {
         return new ChallengeStateView(
                 null, ChallengeStatus.NOT_STARTED.name(), null,
-                0, 0, 0, 0, 0, null, false,
+                0, 0, 0, 0, 0, 0, null, false,
                 List.of(), List.of(), false, 0, false);
     }
 
@@ -333,7 +393,7 @@ public class ChallengeService {
     public void evaluateAndNotify(Challenge challenge) {
         int beforeFailures = challenge.getPendingFailureDays();
         boolean beforeCompletion = challenge.isPendingCompletion();
-        evaluate(challenge, Instant.now());
+        evaluate(challenge, now());
         challengeRepository.save(challenge);
 
         int newMisses = challenge.getPendingFailureDays() - beforeFailures;

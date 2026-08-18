@@ -15,6 +15,7 @@ interface ChallengeStore {
   activities: Activity[];
   loading: boolean;
   error: string | null;
+  testDate: string | null;
 
   fetchState: () => Promise<void>;
   fetchActivities: () => Promise<void>;
@@ -23,6 +24,7 @@ interface ChallengeStore {
   acknowledgePopups: () => Promise<void>;
   advanceDay: () => Promise<void>;
   completeChallengeDev: () => Promise<void>;
+  resetTestClock: () => Promise<void>;
   changeTodayActivity: (activityId: number) => Promise<void>;
   reset: () => void;
 }
@@ -40,6 +42,7 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
   activities: [],
   loading: false,
   error: null,
+  testDate: null,
 
   fetchState: async () => {
     if (isOffline()) {
@@ -54,6 +57,20 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
     try {
       const { data } = await api.get<ChallengeState>("/api/challenge");
       set({ state: data, loading: false });
+
+      try {
+        const { data: devData } = await api.get<{ testDate?: string }>(
+          "/api/dev/date",
+        );
+        set({
+          testDate:
+            devData?.testDate && devData.testDate !== "null"
+              ? devData.testDate
+              : null,
+        });
+      } catch {
+        set({ testDate: null });
+      }
     } catch (e) {
       set({ state: null, loading: false, error: "Could not load challenge" });
     }
@@ -74,6 +91,7 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       activities: [],
       loading: false,
       error: null,
+      testDate: null,
     });
   },
 
@@ -122,12 +140,53 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       set((s) => ({ state: s.state ? mockAdvanceDay(s.state) : s.state }));
       return;
     }
-    // No-op when online for now.
+
+    let nextDate = get().testDate;
+    if (!nextDate) {
+      try {
+        const { data } = await api.get<{ testDate?: string }>("/api/dev/date");
+        if (data?.testDate && data.testDate !== "null") {
+          nextDate = data.testDate;
+        }
+      } catch {
+        // Ignore and fall back to the current started date below.
+      }
+    }
+
+    const startedAt = get().state?.startedAt ?? null;
+    const base = nextDate
+      ? new Date(`${nextDate}T00:00:00Z`)
+      : startedAt
+        ? new Date(startedAt)
+        : new Date();
+
+    base.setUTCDate(base.getUTCDate() + 1);
+    const iso = base.toISOString().slice(0, 10);
+
+    await api.post(`/api/dev/set-date?date=${iso}`);
+    set({ testDate: iso });
+    await get().fetchState();
   },
   completeChallengeDev: async () => {
     if (isOffline()) {
       set((s) => ({ state: s.state ? mockCompleteToday(s.state) : s.state }));
       return;
+    }
+
+    await get().completeToday();
+    await get().fetchState();
+  },
+  resetTestClock: async () => {
+    if (isOffline()) {
+      return;
+    }
+
+    try {
+      await api.post("/api/dev/clear-date");
+      set({ testDate: null });
+      await get().fetchState();
+    } catch {
+      set({ error: "Could not reset test clock" });
     }
   },
 
@@ -138,8 +197,11 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
         const prev = s.state;
         if (prev.todayCompleted) return {} as any;
         const idx = prev.currentDayIndex;
-        const replacement = MOCK_ACTIVITIES.find((x) => x.id === activityId) ?? null;
-        const newSelected = prev.selectedActivities.map((a, i) => (i === idx ? replacement : a));
+        const replacement =
+          MOCK_ACTIVITIES.find((x) => x.id === activityId) ?? null;
+        const newSelected = prev.selectedActivities.map((a, i) =>
+          i === idx ? replacement : a,
+        );
         return {
           state: {
             ...prev,
@@ -151,9 +213,12 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       return;
     }
 
-    const { data } = await api.post<ChallengeState>("/api/challenge/change-activity", {
-      activityId,
-    });
+    const { data } = await api.post<ChallengeState>(
+      "/api/challenge/change-activity",
+      {
+        activityId,
+      },
+    );
     set({ state: data });
   },
 }));

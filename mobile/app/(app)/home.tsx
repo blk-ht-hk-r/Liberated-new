@@ -204,6 +204,7 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
   const state = useChallenge((s) => s.state)!;
   const advanceDay = useChallenge((s) => s.advanceDay);
   const completeChallengeDev = useChallenge((s) => s.completeChallengeDev);
+  const resetTestClock = useChallenge((s) => s.resetTestClock);
 
   const elapsed = useMemo(
     () => formatElapsedFull(state.startedAt, nowMs),
@@ -214,7 +215,7 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
   const done = state.todayCompleted;
 
   const progress =
-    state.status === "COMPLETED" ? state.totalDays : state.currentDayIndex;
+    state.status === "COMPLETED" ? state.totalDays : state.daysElapsed;
 
   return (
     <ScrollView
@@ -264,7 +265,11 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
                 }}
                 style={styles.changeButton}
               >
-                <Ionicons name="create-outline" size={16} color={colors.brass} />
+                <Ionicons
+                  name="create-outline"
+                  size={16}
+                  color={colors.brass}
+                />
                 <Text style={styles.changeText}>Change</Text>
               </Pressable>
             ) : null}
@@ -290,14 +295,31 @@ function ActiveHome({ nowMs }: { nowMs: number }) {
         <Text style={styles.countdown}>{untilMidnight} remaining</Text>
         <Text style={styles.countdownLabel}>Countdown to midnight</Text>
       </View>
-      {isOffline() ? (
+      {__DEV__ ? (
         <View style={styles.devRow}>
           <Pressable onPress={() => advanceDay()} style={styles.skipButton}>
-            <Text style={styles.skipText}>⏭ Skip to next day (dev)</Text>
+            <Text style={styles.skipText}>
+              {isOffline()
+                ? "⏭ Skip to next day (dev)"
+                : "⏭ Advance 1 day (dev/backend)"}
+            </Text>
           </Pressable>
-          <Pressable onPress={() => completeChallengeDev()} style={styles.devButtonSecondary}>
+          <Pressable
+            onPress={() => completeChallengeDev()}
+            style={styles.devButtonSecondary}
+          >
             <Text style={styles.devTextSecondary}>✅ Complete today (dev)</Text>
           </Pressable>
+          {!isOffline() ? (
+            <Pressable
+              onPress={() => resetTestClock()}
+              style={styles.devButtonSecondary}
+            >
+              <Text style={styles.devTextSecondary}>
+                ⏱ Reset test clock (dev)
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </ScrollView>
@@ -461,6 +483,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.inkMuted,
     marginTop: 4,
+  },
+  completedWrap: {
+    flexGrow: 1,
+    alignItems: "flex-start",
+    paddingVertical: spacing.xl,
+  },
+  restartButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.xl,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+  },
+  restartText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 14,
+    color: colors.brass,
   },
 
   // Not-started state

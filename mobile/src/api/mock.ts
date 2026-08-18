@@ -132,6 +132,7 @@ export function mockNotStartedState(): ChallengeState {
     extraDays: 0,
     completedDays: 0,
     currentDayIndex: 0,
+    daysElapsed: 0,
     todayActivity: null,
     todayCompleted: false,
     days: [],
@@ -163,6 +164,7 @@ export function mockStartState(activityIds: number[]): ChallengeState {
     extraDays: 0,
     completedDays: 0,
     currentDayIndex: 0,
+    daysElapsed: 0,
     todayActivity: selected[0] ?? null,
     todayCompleted: false,
     days,
@@ -192,6 +194,7 @@ export function mockCompleteToday(prev: ChallengeState): ChallengeState {
     ...prev,
     days,
     completedDays,
+    daysElapsed: Math.max(prev.daysElapsed, completedDays),
     todayCompleted: true,
   };
 }
@@ -214,6 +217,7 @@ export function mockAdvanceDay(prev: ChallengeState): ChallengeState {
     return {
       ...prev,
       status: "COMPLETED",
+      daysElapsed: prev.totalDays,
       showCompletionPopup: true,
     };
   }
@@ -251,6 +255,7 @@ export function mockAdvanceDay(prev: ChallengeState): ChallengeState {
     totalDays,
     extraDays,
     currentDayIndex: nextIndex,
+    daysElapsed: Math.min(nextIndex, totalDays),
     todayActivity: nextActivity,
     todayCompleted: false,
     showFailurePopup: missed > 0,

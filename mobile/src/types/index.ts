@@ -43,6 +43,7 @@ export interface ChallengeState {
   extraDays: number;
   completedDays: number;
   currentDayIndex: number;
+  daysElapsed: number;
   todayActivity: Activity | null;
   todayCompleted: boolean;
   days: DayView[];

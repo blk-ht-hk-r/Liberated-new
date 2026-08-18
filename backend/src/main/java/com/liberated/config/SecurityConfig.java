@@ -39,7 +39,7 @@ public class SecurityConfig {
                                 "/api/auth/google", "/api/auth/apple")
                         .permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/api/activities").permitAll()
+                        .requestMatchers("/api/activities", "/api/dev/**").permitAll()
                         .anyRequest().authenticated())
                 // Allow the H2 console (it renders inside a frame).
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))

@@ -51,6 +51,7 @@ public class ChallengeDtos {
                         int extraDays,
                         int completedDays,
                         int currentDayIndex,
+                        int daysElapsed,
                         ActivityView todayActivity,
                         boolean todayCompleted,
                         List<DayView> days,
