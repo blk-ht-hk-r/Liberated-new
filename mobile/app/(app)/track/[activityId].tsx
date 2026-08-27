@@ -120,6 +120,11 @@ export default function TrackActivity() {
     }
   }, []);
 
+  const stopGong = useCallback(() => {
+    gongRef.current?.remove();
+    gongRef.current = null;
+  }, []);
+
   const userId = useAuth((s) => s.userId);
 
   useEffect(() => {
@@ -231,12 +236,19 @@ export default function TrackActivity() {
 
   const validate = (): boolean => {
     switch (activity.proofType) {
-      case "NAMED_LIST":
-        if (names.every((n) => !n.trim())) {
-          setError("Add at least one name.");
+      case "NAMED_LIST": {
+        const filled = names.filter((n) => n.trim()).length;
+        const required = cfg.minCount ?? listSize;
+        if (filled < required) {
+          setError(
+            required === 1
+              ? "Add at least one name."
+              : `Add all ${required} names to mark this done.`,
+          );
           return false;
         }
         return true;
+      }
       case "TEXT_ENTRY":
         if (!textValue.trim()) {
           setError("Write a few words to mark this done.");
@@ -434,6 +446,7 @@ export default function TrackActivity() {
                         label="Stop"
                         variant="secondary"
                         onPress={() => {
+                          stopGong();
                           setTimerMinutes(
                             Math.floor((Date.now() - timerStart) / 60000),
                           );

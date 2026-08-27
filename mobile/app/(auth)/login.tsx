@@ -14,7 +14,6 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
-import * as AppleAuthentication from "expo-apple-authentication";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/store/auth";
 import { apiErrorMessage } from "@/api/client";
@@ -132,49 +131,6 @@ export default function Login() {
       await promptGoogle();
     });
 
-  const appleSignIn = () =>
-    run(async () => {
-      if (config.appleMock) {
-        await auth.loginWithApple(`mock-apple-${Date.now()}`);
-        router.replace("/(app)/home");
-        return;
-      }
-      if (Platform.OS !== "ios") {
-        setError("Apple sign-in is only available on iOS devices.");
-        return;
-      }
-      const available = await AppleAuthentication.isAvailableAsync();
-      if (!available) {
-        setError("Apple sign-in is not available on this device.");
-        return;
-      }
-      try {
-        const credential = await AppleAuthentication.signInAsync({
-          requestedScopes: [
-            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-            AppleAuthentication.AppleAuthenticationScope.EMAIL,
-          ],
-        });
-        if (!credential.identityToken) {
-          setError("Apple did not return an identity token.");
-          return;
-        }
-        const fullName = [
-          credential.fullName?.givenName,
-          credential.fullName?.familyName,
-        ]
-          .filter(Boolean)
-          .join(" ");
-        await auth.loginWithApple(
-          credential.identityToken,
-          fullName || undefined,
-        );
-        router.replace("/(app)/home");
-      } catch (e: any) {
-        if (e?.code === "ERR_REQUEST_CANCELED") return;
-        throw e;
-      }
-    });
 
   const skipLogin = () =>
     run(async () => {
@@ -211,21 +167,17 @@ export default function Login() {
                     onPress={googleSignIn}
                     loading={loading}
                   />
-                  <SocialButton
-                    icon="logo-apple"
-                    label="Continue with Apple"
-                    variant="dark"
-                    onPress={appleSignIn}
-                  />
-                  <SocialButton
-                    icon="call"
-                    label="Continue with Mobile Number"
-                    variant="teal"
-                    onPress={() => {
-                      setError(null);
-                      setScreen("phone");
-                    }}
-                  />
+                  {config.phoneAuthEnabled && (
+                    <SocialButton
+                      icon="call"
+                      label="Continue with Mobile Number"
+                      variant="teal"
+                      onPress={() => {
+                        setError(null);
+                        setScreen("phone");
+                      }}
+                    />
+                  )}
                 </View>
 
                 <Pressable
@@ -253,7 +205,7 @@ export default function Login() {
               </>
             )}
 
-            {screen === "phone" && (
+            {screen === "phone" && config.phoneAuthEnabled && (
               <>
                 <BackLink onPress={() => setScreen("welcome")} />
                 <Text style={styles.heading}>Your number</Text>

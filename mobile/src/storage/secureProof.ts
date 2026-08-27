@@ -145,6 +145,25 @@ export async function purgeOldProof(userId: number, today: string): Promise<void
   await writeIndexForUser(userId, keep);
 }
 
+/**
+ * Delete EVERY stored proof for a user, regardless of date. Used when the user
+ * restarts the challenge after finishing, so a fresh run never shows old logs.
+ */
+export async function purgeAllProof(userId: number): Promise<void> {
+  const index = await readIndex(userId);
+  for (const entry of index) {
+    await SecureStore.deleteItemAsync(entry.key);
+    if (entry.imageUri) {
+      try {
+        await FileSystem.deleteAsync(entry.imageUri, { idempotent: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+  await writeIndexForUser(userId, []);
+}
+
 export function localDateString(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

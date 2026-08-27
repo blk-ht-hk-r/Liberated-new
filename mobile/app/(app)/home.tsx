@@ -19,6 +19,7 @@ import { useAuth } from "@/store/auth";
 import { useChallenge } from "@/store/challenge";
 import { useNow, formatElapsedFull, formatUntilMidnight } from "@/hooks/time";
 import { isOffline } from "@/api/mock";
+import { purgeAllProof } from "@/storage/secureProof";
 import {
   categoryColors,
   categoryEmojis,
@@ -39,6 +40,7 @@ const QUOTE = {
 export default function Home() {
   const router = useRouter();
   const logout = useAuth((s) => s.logout);
+  const userId = useAuth((s) => s.userId);
   const quoteShown = useAuth((s) => s.quoteShown);
   const markQuoteShown = useAuth((s) => s.markQuoteShown);
 
@@ -63,6 +65,19 @@ export default function Home() {
     markQuoteShown();
   };
 
+  // Restarting after completion must also wipe the on-device logs from the
+  // previous run so the new challenge starts clean.
+  const handleRestart = React.useCallback(async () => {
+    if (userId != null) {
+      try {
+        await purgeAllProof(userId);
+      } catch {
+        // Proof purge is best-effort; still allow the restart.
+      }
+    }
+    reset();
+  }, [userId, reset]);
+
   const celebrate = () => {
     setShowConfetti(true);
     acknowledgePopups();
@@ -83,7 +98,7 @@ export default function Home() {
             <ActivityIndicator size="large" color={colors.brass} />
           </View>
         ) : state && state.status === "COMPLETED" ? (
-          <CompletedHome onRestart={reset} />
+          <CompletedHome onRestart={handleRestart} />
         ) : state && state.status !== "NOT_STARTED" ? (
           <ActiveHome nowMs={nowMs} />
         ) : (

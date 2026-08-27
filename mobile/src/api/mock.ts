@@ -102,8 +102,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
     "An act of love",
     "Do something kind for someone.",
     "RELATIONAL",
-    "NAMED_LIST",
-    '{"listSize":1}',
+    "TEXT_ENTRY",
   ),
   a("Write something", "Write a page, a post, or an idea.", "CONTENT", "PHOTO"),
   a("Create or produce", "Make something and capture it.", "CONTENT", "PHOTO"),
@@ -190,11 +189,14 @@ export function mockCompleteToday(prev: ChallengeState): ChallengeState {
       : d,
   );
 
+  // daysElapsed is day-based (calendar days elapsed) and must NOT change when a
+  // task is completed - it advances only on day rollover (mockAdvanceDay),
+  // matching the backend. On the final day the bar is already full before
+  // completing, so no bump is needed here.
   return {
     ...prev,
     days,
     completedDays,
-    daysElapsed: Math.max(prev.daysElapsed, completedDays),
     todayCompleted: true,
   };
 }
@@ -231,16 +233,6 @@ export function mockAdvanceDay(prev: ChallengeState): ChallengeState {
   }
 
   const nextIndex = prev.currentDayIndex + 1;
-
-  if (prev.completedDays >= totalDays) {
-    return {
-      ...prev,
-      totalDays,
-      extraDays,
-      status: "COMPLETED",
-      showCompletionPopup: true,
-    };
-  }
 
   const sel = prev.selectedActivities;
   const nextActivity = sel.length ? sel[nextIndex % sel.length] : null;

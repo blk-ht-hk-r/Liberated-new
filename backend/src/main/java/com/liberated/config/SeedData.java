@@ -56,7 +56,7 @@ public class SeedData {
                                         new Activity("Call someone you love", "Call a person you care about.",
                                                         Category.RELATIONAL, ProofType.NAMED_LIST, "{\"listSize\":1}"),
                                         new Activity("An act of love", "Do something kind for someone.",
-                                                        Category.RELATIONAL, ProofType.NAMED_LIST, "{\"listSize\":1}"),
+                                                        Category.RELATIONAL, ProofType.TEXT_ENTRY, "{}"),
 
                                         // CONTENT
                                         new Activity("Write something", "Write a page, a post, or an idea.",

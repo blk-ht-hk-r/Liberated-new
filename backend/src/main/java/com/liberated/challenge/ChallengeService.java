@@ -108,6 +108,9 @@ public class ChallengeService {
 
         Challenge challenge = new Challenge();
         challenge.setUserId(userId);
+        // Always stamp the real wall-clock start time so the "Time Since
+        // Liberation" counter reflects true elapsed time. The dev test clock
+        // (now()/today()) is used only for day-math below, never for startedAt.
         challenge.setStartedAt(now());
         challenge.setBaseDays(ids.size());
         challenge.setStatus(ChallengeStatus.ACTIVE);
@@ -186,11 +189,21 @@ public class ChallengeService {
         }
 
         int idx = todayLog.getDayIndex();
-        if (idx < 0 || idx >= challenge.getSelectedActivityIds().size()) {
+        List<Long> schedule = challenge.getSelectedActivityIds();
+        if (idx < 0 || idx >= schedule.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid day index");
         }
 
-        challenge.getSelectedActivityIds().set(idx, activityId);
+        Long currentActivityId = schedule.get(idx);
+        if (!activityId.equals(currentActivityId)) {
+            // If the chosen activity is already scheduled on another (future) day,
+            // swap the two entries instead of overwriting so the activity isn't duplicated.
+            int otherIdx = schedule.indexOf(activityId);
+            if (otherIdx >= 0 && otherIdx != idx) {
+                schedule.set(otherIdx, currentActivityId);
+            }
+            schedule.set(idx, activityId);
+        }
         challengeRepository.save(challenge);
         return buildState(challenge, now, false);
     }
