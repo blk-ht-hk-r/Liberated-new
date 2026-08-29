@@ -40,10 +40,22 @@
     ],
     "extra": {
       "apiBaseUrl": "https://liberated-backend-678040958972.us-central1.run.app",
+      "googleAuthEnabled": false,
       "googleMock": false,
       "googleIosClientId": "678040958972-fi0di67gh6vclc4g7cpgp21tfdujn3tj.apps.googleusercontent.com",
       "googleAndroidClientId": "678040958972-3hofhb11bas7verl1alvore9t2ipa0kb.apps.googleusercontent.com",
-      "googleWebClientId": "678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com"
+      "googleWebClientId": "678040958972-igkfrkq71eak8qf4t2aafgsr8op020qu.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "c7523779-b318-4c9e-8836-5ac848c12313"
+      }
+    },
+    "owner": "13samyak",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c7523779-b318-4c9e-8836-5ac848c12313"
     }
   }
 }

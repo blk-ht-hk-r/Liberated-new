@@ -25,6 +25,8 @@ export const config = {
   // Flip to true to re-enable the "Continue with Mobile Number" flow.
   phoneAuthEnabled:
     (Constants.expoConfig?.extra as any)?.phoneAuthEnabled ?? false,
+  googleAuthEnabled:
+    (Constants.expoConfig?.extra as any)?.googleAuthEnabled ?? true,
   googleMock: (Constants.expoConfig?.extra as any)?.googleMock ?? true,
   google: {
     iosClientId: (Constants.expoConfig?.extra as any)?.googleIosClientId as
@@ -33,6 +35,7 @@ export const config = {
     androidClientId: (Constants.expoConfig?.extra as any)
       ?.googleAndroidClientId as string | undefined,
     webClientId: (Constants.expoConfig?.extra as any)?.googleWebClientId as
-      string | undefined,
+      | string
+      | undefined,
   },
 };

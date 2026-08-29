@@ -160,13 +160,15 @@ export default function Login() {
                 <Text style={styles.headingAccent}>Breathe.</Text>
 
                 <View style={styles.buttonGroup}>
-                  <SocialButton
-                    icon="logo-google"
-                    label="Continue with Google"
-                    variant="light"
-                    onPress={googleSignIn}
-                    loading={loading}
-                  />
+                  {config.googleAuthEnabled && (
+                    <SocialButton
+                      icon="logo-google"
+                      label="Continue with Google"
+                      variant="light"
+                      onPress={googleSignIn}
+                      loading={loading}
+                    />
+                  )}
                   {config.phoneAuthEnabled && (
                     <SocialButton
                       icon="call"
@@ -178,17 +180,17 @@ export default function Login() {
                       }}
                     />
                   )}
+                  <SocialButton
+                    icon="mail-outline"
+                    label="Continue with Email"
+                    variant="teal"
+                    onPress={() => {
+                      setError(null);
+                      setScreen("email");
+                    }}
+                    loading={loading}
+                  />
                 </View>
-
-                <Pressable
-                  onPress={() => {
-                    setError(null);
-                    setScreen("email");
-                  }}
-                  style={styles.switch}
-                >
-                  <Text style={styles.switchText}>Continue with email</Text>
-                </Pressable>
 
                 {__DEV__ && (
                   <Pressable onPress={skipLogin} style={styles.skip}>
