@@ -11,6 +11,24 @@ liberated:
     secret: ${LIBERATED_JWT_SECRET}
 
 spring:
+  # --- PostgreSQL (Neon) -----------------------------------------------------
+  # Set these env vars on the backend host (Cloud Run / GCE).
+  # DATABASE_URL must be the JDBC form of the Neon connection string, e.g.:
+  #   jdbc:postgresql://ep-xxxx-xxxx.<region>.aws.neon.tech/<dbname>?sslmode=require
+  # (Neon shows a "postgresql://..." URL; swap the scheme to "jdbc:postgresql://",
+  #  drop the user:pass@ part, and keep ?sslmode=require.)
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # Hibernate creates/updates the schema on first prod boot.
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   h2:
     console:
       enabled: false
