@@ -36,7 +36,7 @@ api.interceptors.request.use(async (cfg) => {
   }
   // Stamp a start time for latency measurement (never logs the token itself).
   (cfg as any).metadata = { start: Date.now() };
-  logger.debug("api", `뿯ν뿯½뿯½ ${cfg.method?.toUpperCase()} ${cfg.url}`);
+  logger.debug("api", `→ ${cfg.method?.toUpperCase()} ${cfg.url}`);
   return cfg;
 });
 
@@ -47,7 +47,7 @@ api.interceptors.response.use(
     const ms = start ? Date.now() - start : 0;
     logger.debug(
       "api",
-      `뿯ν뿯½뿯½ ${res.status} ${res.config.method?.toUpperCase()} ${res.config.url} (${ms}ms)`,
+      `← ${res.status} ${res.config.method?.toUpperCase()} ${res.config.url} (${ms}ms)`,
     );
     return res;
   },
@@ -57,7 +57,7 @@ api.interceptors.response.use(
     const status = error.response?.status ?? "NETWORK";
     logger.error(
       "api",
-      `뿯ν뿯½뿯½ ${status} ${cfg.method?.toUpperCase?.() ?? ""} ${cfg.url ?? ""} (${ms}ms)`,
+      `× ${status} ${cfg.method?.toUpperCase?.() ?? ""} ${cfg.url ?? ""} (${ms}ms)`,
       error.response?.data ?? error.message,
     );
     return Promise.reject(error);

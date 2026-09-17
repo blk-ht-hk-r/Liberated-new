@@ -38,6 +38,10 @@ function currentTimezone(): string {
   }
 }
 
+function acceptOptionalDevDate(status: number): boolean {
+  return (status >= 200 && status < 300) || status === 404;
+}
+
 export const useChallenge = create<ChallengeStore>((set, get) => ({
   state: null,
   activities: [],
@@ -62,6 +66,7 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       try {
         const { data: devData } = await api.get<{ testDate?: string }>(
           "/api/dev/date",
+          { validateStatus: acceptOptionalDevDate },
         );
         set({
           testDate:
@@ -147,7 +152,10 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
     let nextDate = get().testDate;
     if (!nextDate) {
       try {
-        const { data } = await api.get<{ testDate?: string }>("/api/dev/date");
+        const { data } = await api.get<{ testDate?: string }>(
+          "/api/dev/date",
+          { validateStatus: acceptOptionalDevDate },
+        );
         if (data?.testDate && data.testDate !== "null") {
           nextDate = data.testDate;
         }
