@@ -17,6 +17,7 @@ import * as WebBrowser from "expo-web-browser";
 import { Button } from "@/components/Button";
 import { useAuth } from "@/store/auth";
 import { apiErrorMessage } from "@/api/client";
+import { logger } from "@/lib/logger";
 import { config } from "@/config";
 import { colors, fonts, radius, shadow, spacing } from "@/theme";
 
@@ -63,6 +64,7 @@ export default function Login() {
     try {
       await fn();
     } catch (e) {
+      logger.error("auth", "action failed", apiErrorMessage(e));
       setError(apiErrorMessage(e));
     } finally {
       setLoading(false);

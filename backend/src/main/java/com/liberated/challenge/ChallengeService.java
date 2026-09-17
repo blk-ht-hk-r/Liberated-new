@@ -5,6 +5,8 @@ import com.liberated.domain.*;
 import com.liberated.repository.ActivityRepository;
 import com.liberated.repository.ChallengeRepository;
 import com.liberated.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,8 @@ import java.util.Map;
  */
 @Service
 public class ChallengeService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChallengeService.class);
 
     private final ChallengeRepository challengeRepository;
     private final ActivityRepository activityRepository;
@@ -122,6 +126,8 @@ public class ChallengeService {
         challenge.getDayLogs().add(new DayLog(challenge, 0, startDate));
 
         challengeRepository.save(challenge);
+        log.debug("Challenge started user={} activities={} baseDays={}",
+                userId, ids, ids.size());
         return buildState(challenge, now(), false);
     }
 
@@ -150,6 +156,8 @@ public class ChallengeService {
         if (!todayLog.isCompleted()) {
             todayLog.setCompleted(true);
             todayLog.setCompletedAt(now);
+            log.debug("Task completed user={} completed={}/{}",
+                    userId, countCompleted(challenge), challenge.getBaseDays());
         }
 
         // Completion is deferred to end-of-day (see evaluate): finishing the
@@ -250,6 +258,8 @@ public class ChallengeService {
         }
         if (newMisses > 0) {
             challenge.setPendingFailureDays(challenge.getPendingFailureDays() + newMisses);
+            log.debug("Penalty applied challenge={} newMisses={} totalDays={}",
+                    challenge.getId(), newMisses, challenge.getTotalDays());
         }
 
         // End-of-day completion: once all base tasks are done, the challenge
@@ -267,6 +277,8 @@ public class ChallengeService {
                 if (challenge.getCompletedAt() == null) {
                     challenge.setCompletedAt(now);
                     challenge.setPendingCompletion(true);
+                    log.debug("Challenge completed challenge={} user={}",
+                            challenge.getId(), challenge.getUserId());
                 }
             }
         }

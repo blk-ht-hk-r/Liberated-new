@@ -8,3 +8,8 @@ liberated:
   jwt:
     # Local dev secret. Must be at least 32 characters.
     secret: "a-very-long-secret-with-at-least-32-characters"
+
+# Verbose app logging in local dev only (base/prod stay at INFO).
+logging:
+  level:
+    com.liberated: DEBUG

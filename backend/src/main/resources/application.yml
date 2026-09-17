@@ -65,3 +65,7 @@ liberated:
 logging:
   level:
     com.liberated: INFO
+  # Inject the per-request id (set by RequestLoggingFilter) into every line via
+  # the level field, so no full logback pattern / XML file is needed.
+  pattern:
+    level: "%5p [req:%X{requestId:-}]"

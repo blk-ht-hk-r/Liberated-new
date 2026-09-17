@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { api } from "@/api/client";
+import { api, apiErrorMessage } from "@/api/client";
+import { logger } from "@/lib/logger";
 import {
   isOffline,
   MOCK_ACTIVITIES,
@@ -69,9 +70,11 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
               : null,
         });
       } catch {
+        logger.debug("challenge", "dev test-date unavailable");
         set({ testDate: null });
       }
     } catch (e) {
+      logger.error("challenge", "fetchState failed", apiErrorMessage(e));
       set({ state: null, loading: false, error: "Could not load challenge" });
     }
   },
@@ -150,6 +153,7 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
         }
       } catch {
         // Ignore and fall back to the current started date below.
+        logger.debug("challenge", "dev date fetch failed, using fallback");
       }
     }
 
@@ -185,7 +189,8 @@ export const useChallenge = create<ChallengeStore>((set, get) => ({
       await api.post("/api/dev/clear-date");
       set({ testDate: null });
       await get().fetchState();
-    } catch {
+    } catch (e) {
+      logger.error("challenge", "resetTestClock failed", apiErrorMessage(e));
       set({ error: "Could not reset test clock" });
     }
   },
