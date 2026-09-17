@@ -49,6 +49,11 @@ public class AuthController {
         return authService.apple(req);
     }
 
+    @GetMapping("/me")
+    public CurrentUserResponse me(@AuthenticationPrincipal Long userId) {
+        return authService.currentUser(userId);
+    }
+
     /** Store the caller's Expo push token (requires auth). */
     @PostMapping("/push-token")
     public ResponseEntity<Void> pushToken(@AuthenticationPrincipal Long userId,

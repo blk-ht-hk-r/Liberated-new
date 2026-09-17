@@ -1,8 +1,10 @@
 import { useEffect } from "react";
-import { Slot, useRouter, useSegments } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Fraunces_400Regular,
   Fraunces_400Regular_Italic,
@@ -16,7 +18,8 @@ import {
 } from "@expo-google-fonts/inter";
 import { useAuth } from "@/store/auth";
 import { purgeOldProof, localDateString } from "@/storage/secureProof";
-import { colors } from "@/theme";
+import { Button } from "@/components/Button";
+import { colors, fonts, spacing } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -31,42 +34,88 @@ export default function RootLayout() {
   });
 
   const bootstrap = useAuth((s) => s.bootstrap);
-  const initializing = useAuth((s) => s.initializing);
-  const token = useAuth((s) => s.token);
-  const segments = useSegments();
-  const router = useRouter();
+  const status = useAuth((s) => s.status);
+  const userId = useAuth((s) => s.userId);
 
   useEffect(() => {
     bootstrap();
-    // Purge any private proof left over from previous days on launch (per-user).
-    const userId = useAuth.getState().userId;
-    if (userId != null) purgeOldProof(userId, localDateString()).catch(() => {});
   }, [bootstrap]);
 
   useEffect(() => {
-    if (fontsLoaded && !initializing) {
-      SplashScreen.hideAsync().catch(() => {});
+    if (status === "authenticated" && userId != null) {
+      purgeOldProof(userId, localDateString()).catch(() => {});
     }
-  }, [fontsLoaded, initializing]);
+  }, [status, userId]);
 
   useEffect(() => {
-    if (initializing || !fontsLoaded) return;
-    const inAuthGroup = segments[0] === "(auth)";
-    if (!token && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (token && inAuthGroup) {
-      router.replace("/(app)/home");
+    if (fontsLoaded && status !== "initializing") {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [token, initializing, fontsLoaded, segments, router]);
+  }, [fontsLoaded, status]);
 
-  if (!fontsLoaded || initializing) {
+  if (!fontsLoaded || status === "initializing") {
     return null;
   }
 
+  if (status === "connectionError") {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar style="dark" />
+        <SafeAreaView style={styles.connectionSafe}>
+          <View style={styles.connectionContent}>
+            <Text style={styles.connectionTitle}>Could not verify your session</Text>
+            <Text style={styles.connectionBody}>
+              Check your connection and try again. Your saved session has not
+              been removed.
+            </Text>
+            <Button label="Try again" onPress={bootstrap} />
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.paper }}>
+    <GestureHandlerRootView style={styles.root}>
       <StatusBar style="dark" />
-      <Slot />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Protected guard={status === "authenticated"}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={status === "unauthenticated"}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.paper,
+  },
+  connectionSafe: {
+    flex: 1,
+    backgroundColor: colors.paper,
+  },
+  connectionContent: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+  connectionTitle: {
+    fontFamily: fonts.display,
+    fontSize: 28,
+    color: colors.ink,
+  },
+  connectionBody: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.inkMuted,
+    marginBottom: spacing.sm,
+  },
+});

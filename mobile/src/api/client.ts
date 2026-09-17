@@ -11,6 +11,14 @@ export const api = axios.create({
 });
 
 let inMemoryToken: string | null = null;
+let unauthorizedHandler: (() => void | Promise<void>) | null = null;
+let handlingUnauthorized = false;
+
+export function registerUnauthorizedHandler(
+  handler: () => void | Promise<void>,
+): void {
+  unauthorizedHandler = handler;
+}
 
 export async function loadToken(): Promise<string | null> {
   if (inMemoryToken) return inMemoryToken;
@@ -60,6 +68,28 @@ api.interceptors.response.use(
       `× ${status} ${cfg.method?.toUpperCase?.() ?? ""} ${cfg.url ?? ""} (${ms}ms)`,
       error.response?.data ?? error.message,
     );
+
+    const url = cfg.url ?? "";
+    const isProtectedAuthRequest =
+      url === "/api/auth/me" || url === "/api/auth/push-token";
+    const isPublicAuthRequest =
+      url.startsWith("/api/auth/") && !isProtectedAuthRequest;
+    if (
+      status === 401 &&
+      inMemoryToken &&
+      !isPublicAuthRequest &&
+      unauthorizedHandler &&
+      !handlingUnauthorized
+    ) {
+      handlingUnauthorized = true;
+      Promise.resolve(unauthorizedHandler())
+        .catch((handlerError) => {
+          logger.error("auth", "failed to clear unauthorized session", handlerError);
+        })
+        .finally(() => {
+          handlingUnauthorized = false;
+        });
+    }
     return Promise.reject(error);
   },
 );

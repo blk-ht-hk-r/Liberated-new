@@ -60,3 +60,10 @@ export interface AuthResponse {
   displayName: string | null;
   authProvider: string;
 }
+
+export interface CurrentUserResponse {
+  userId: number;
+  email: string | null;
+  displayName: string | null;
+  authProvider: string;
+}

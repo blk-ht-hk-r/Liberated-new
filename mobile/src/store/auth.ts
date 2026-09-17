@@ -1,15 +1,27 @@
 import { create } from "zustand";
-import { api, setToken, loadToken } from "@/api/client";
+import axios from "axios";
+import {
+  api,
+  setToken,
+  loadToken,
+  registerUnauthorizedHandler,
+} from "@/api/client";
 import { OFFLINE_TOKEN, setOffline } from "@/api/mock";
 import { useChallenge } from "@/store/challenge";
-import { AuthResponse } from "@/types";
+import { AuthResponse, CurrentUserResponse } from "@/types";
+
+export type AuthStatus =
+  | "initializing"
+  | "authenticated"
+  | "unauthenticated"
+  | "connectionError";
 
 interface AuthState {
   userId: number | null;
   email: string | null;
   displayName: string | null;
   token: string | null;
-  initializing: boolean;
+  status: AuthStatus;
   /** Whether the post-login quote popup has been shown this session. */
   quoteShown: boolean;
 
@@ -26,40 +38,79 @@ interface AuthState {
   /** Dev-only: start a local offline demo session with no backend. */
   enableOfflineMode: () => Promise<void>;
   markQuoteShown: () => void;
+  clearSession: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 function applyAuth(set: any, data: AuthResponse) {
+  setOffline(false);
   set({
     userId: data.userId,
     email: data.email,
     displayName: data.displayName,
     token: data.token,
+    status: "authenticated",
     quoteShown: false,
   });
 }
 
-export const useAuth = create<AuthState>((set) => ({
+export const useAuth = create<AuthState>((set, get) => ({
   userId: null,
   email: null,
   displayName: null,
   token: null,
-  initializing: true,
+  status: "initializing",
   quoteShown: false,
 
   bootstrap: async () => {
-    const token = await loadToken();
-    if (token === OFFLINE_TOKEN) {
-      setOffline(true);
+    set({ status: "initializing" });
+    try {
+      const token = await loadToken();
+      if (!token) {
+        setOffline(false);
+        set({
+          token: null,
+          userId: null,
+          email: null,
+          displayName: null,
+          status: "unauthenticated",
+        });
+        return;
+      }
+
+      if (token === OFFLINE_TOKEN) {
+        setOffline(true);
+        set({
+          token,
+          userId: 0,
+          email: null,
+          displayName: "Guest",
+          status: "authenticated",
+        });
+        return;
+      }
+
+      setOffline(false);
+      set({ token });
+      const { data } = await api.get<CurrentUserResponse>("/api/auth/me");
       set({
-        token,
-        userId: 0,
-        displayName: "Guest",
-        initializing: false,
+        userId: data.userId,
+        email: data.email,
+        displayName: data.displayName,
+        status: "authenticated",
       });
-      return;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        await get().clearSession();
+        return;
+      }
+      set({
+        userId: null,
+        email: null,
+        displayName: null,
+        status: "connectionError",
+      });
     }
-    set({ token, initializing: false });
   },
 
   loginWithEmail: async (email, password) => {
@@ -112,20 +163,27 @@ export const useAuth = create<AuthState>((set) => ({
       email: null,
       displayName: "Guest",
       token: OFFLINE_TOKEN,
+      status: "authenticated",
       quoteShown: false,
     });
   },
 
-  logout: async () => {
+  clearSession: async () => {
     setOffline(false);
-    await setToken(null);
+    const clearToken = setToken(null);
     useChallenge.getState().reset();
     set({
       userId: null,
       email: null,
       displayName: null,
       token: null,
+      status: "unauthenticated",
       quoteShown: false,
     });
+    await clearToken;
   },
+
+  logout: async () => get().clearSession(),
 }));
+
+registerUnauthorizedHandler(() => useAuth.getState().clearSession());

@@ -1,6 +1,11 @@
 import { Redirect } from "expo-router";
+import { useAuth } from "@/store/auth";
 
-/** Entry point - routing is handled by the auth gate in the root layout. */
 export default function Index() {
-  return <Redirect href="/(app)/home" />;
+  const status = useAuth((state) => state.status);
+  return (
+    <Redirect
+      href={status === "authenticated" ? "/(app)/home" : "/(auth)/login"}
+    />
+  );
 }

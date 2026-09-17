@@ -46,6 +46,13 @@ public class AuthDtos {
                         String authProvider) {
         }
 
+        public record CurrentUserResponse(
+                        Long userId,
+                        String email,
+                        String displayName,
+                        String authProvider) {
+        }
+
         public record PushTokenRequest(
                         @NotBlank String expoPushToken) {
         }

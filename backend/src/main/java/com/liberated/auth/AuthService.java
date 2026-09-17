@@ -127,6 +127,16 @@ public class AuthService {
         userRepository.save(user);
     }
 
+        public CurrentUserResponse currentUser(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        return new CurrentUserResponse(
+            user.getId(),
+            user.getEmail(),
+            user.getDisplayName(),
+            user.getAuthProvider().name());
+        }
+
     private AuthResponse toResponse(User user) {
         String token = jwtService.generateToken(user.getId(),
                 user.getEmail() != null ? user.getEmail() : user.getPhone());

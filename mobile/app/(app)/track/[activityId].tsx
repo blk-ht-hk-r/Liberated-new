@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -19,16 +13,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import {
-  createAudioPlayer,
-  setAudioModeAsync,
-  type AudioPlayer,
-} from "expo-audio";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { Button } from "@/components/Button";
 import { PrivacyBanner } from "@/components/PrivacyBanner";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { useChallenge } from "@/store/challenge";
 import { useAuth } from "@/store/auth";
+import { useChallenge } from "@/store/challenge";
 import {
   getProof,
   saveProof,
@@ -46,7 +36,7 @@ import {
   radius,
   shadow,
   spacing,
-  type
+  type,
 } from "@/theme";
 import { useNow } from "@/hooks/time";
 
@@ -64,6 +54,7 @@ export default function TrackActivity() {
   const id = Number(activityId);
   const today = localDateString();
 
+  const userId = useAuth((s) => s.userId);
   const state = useChallenge((s) => s.state);
   const activities = useChallenge((s) => s.activities);
   const completeToday = useChallenge((s) => s.completeToday);
@@ -91,55 +82,36 @@ export default function TrackActivity() {
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const nowMs = useNow(timerStart ? 1000 : 60000);
 
-  const gongRef = useRef<AudioPlayer | null>(null);
+  const gongPlayer = useAudioPlayer(
+    require("../../../assets/sounds/gong.mp3"),
+  );
   const closingGongPlayedRef = useRef(false);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-    return () => {
-      gongRef.current?.remove();
-      gongRef.current = null;
-    };
   }, []);
 
   const playGong = useCallback(async () => {
     try {
-      const player = createAudioPlayer(
-        require("../../../assets/sounds/gong.mp3"),
-      );
-      gongRef.current = player;
-      player.play();
-      player.addListener("playbackStatusUpdate", (status) => {
-        if (status.didJustFinish) {
-          player.remove();
-          if (gongRef.current === player) gongRef.current = null;
-        }
-      });
+      await gongPlayer.seekTo(0);
+      gongPlayer.play();
     } catch {
-      /* Sound is a gentle enhancement; ignore playback failures. */
+      // Sound is a gentle enhancement; ignore playback failures.
     }
-  }, []);
-
-  const stopGong = useCallback(() => {
-    gongRef.current?.remove();
-    gongRef.current = null;
-  }, []);
-
-  const userId = useAuth((s) => s.userId);
+  }, [gongPlayer]);
 
   useEffect(() => {
+    if (userId == null) {
+      setLoading(false);
+      return;
+    }
     (async () => {
-      if (userId == null) {
-        setExisting(null);
-        setLoading(false);
-        return;
-      }
       await purgeOldProof(userId, today);
       const found = await getProof(userId, id, today);
       setExisting(found);
       setLoading(false);
     })();
-  }, [id, today, userId]);
+  }, [userId, id, today]);
 
   // Sound the closing gong 1 min before the end (so it finishes at the target),
   // then stop the timer exactly at the target.
@@ -236,19 +208,12 @@ export default function TrackActivity() {
 
   const validate = (): boolean => {
     switch (activity.proofType) {
-      case "NAMED_LIST": {
-        const filled = names.filter((n) => n.trim()).length;
-        const required = cfg.minCount ?? listSize;
-        if (filled < required) {
-          setError(
-            required === 1
-              ? "Add at least one name."
-              : `Add all ${required} names to mark this done.`,
-          );
+      case "NAMED_LIST":
+        if (names.every((n) => !n.trim())) {
+          setError("Add at least one name.");
           return false;
         }
         return true;
-      }
       case "TEXT_ENTRY":
         if (!textValue.trim()) {
           setError("Write a few words to mark this done.");
@@ -281,10 +246,12 @@ export default function TrackActivity() {
   const submit = async () => {
     setError(null);
     if (!validate()) return;
+    if (userId == null) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
     setSubmitting(true);
     try {
-      if (userId == null) throw new Error("Not signed in");
-
       await saveProof(userId, {
         activityId: id,
         proofType: activity.proofType,
@@ -306,7 +273,7 @@ export default function TrackActivity() {
       await completeToday();
       router.replace("/(app)/home");
     } catch (e) {
-      setError(String(e));
+      setError("Could not save. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -446,7 +413,6 @@ export default function TrackActivity() {
                         label="Stop"
                         variant="secondary"
                         onPress={() => {
-                          stopGong();
                           setTimerMinutes(
                             Math.floor((Date.now() - timerStart) / 60000),
                           );
