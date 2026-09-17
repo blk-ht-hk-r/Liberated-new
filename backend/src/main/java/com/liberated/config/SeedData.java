@@ -26,9 +26,9 @@ public class SeedData {
                                         // PHYSICAL
                                         new Activity("Go for a workout", "Hit the gym or train at home.",
                                                         Category.PHYSICAL, ProofType.PHOTO, "{}"),
-                                        new Activity("100 squats", "Do 100 squats through the day.",
+                                        new Activity("50 squats", "Do 50 squats through the day.",
                                                         Category.PHYSICAL, ProofType.COUNTER,
-                                                        "{\"counterTarget\":100}"),
+                                                        "{\"counterTarget\":50}"),
                                         new Activity("Cold shower", "Take a cold shower.",
                                                         Category.PHYSICAL, ProofType.PHOTO, "{}"),
                                         new Activity("Walk 30 minutes", "Get outside for a 30 minute walk.",

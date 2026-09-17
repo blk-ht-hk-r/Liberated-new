@@ -78,6 +78,8 @@ export default function TrackActivity() {
   const [textValue, setTextValue] = useState("");
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [count, setCount] = useState(0);
+  const [counterEntry, setCounterEntry] = useState("");
+  const [savingCounter, setSavingCounter] = useState(false);
   const [timerStart, setTimerStart] = useState<number | null>(null);
   const [timerMinutes, setTimerMinutes] = useState<number | null>(null);
   const nowMs = useNow(timerStart ? 1000 : 60000);
@@ -109,6 +111,7 @@ export default function TrackActivity() {
       await purgeOldProof(userId, today);
       const found = await getProof(userId, id, today);
       setExisting(found);
+      setCount(found?.count ?? 0);
       setLoading(false);
     })();
   }, [userId, id, today]);
@@ -154,7 +157,9 @@ export default function TrackActivity() {
     );
   }
 
-  const alreadyDone = !!existing;
+  const alreadyDone =
+    !!existing &&
+    (activity.proofType !== "COUNTER" || !!state?.todayCompleted);
 
   // Only proof types that store personal content (photos, names, written text)
   // warrant the on-device privacy reassurance.
@@ -200,6 +205,10 @@ export default function TrackActivity() {
   const timerReachedTarget =
     timerTargetSec != null && (elapsedTimerSec ?? 0) >= timerTargetSec;
 
+  const counterReachedTarget =
+    activity.proofType === "COUNTER" &&
+    (cfg.counterTarget ? count >= cfg.counterTarget : count > 0);
+
   const formatClock = (totalSec: number): string => {
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
@@ -233,13 +242,44 @@ export default function TrackActivity() {
         }
         return true;
       case "COUNTER":
-        if (count < 1) {
-          setError("Log at least one.");
+        if (!counterReachedTarget) {
+          setError(`Reach ${cfg.counterTarget ?? 1} before marking complete.`);
           return false;
         }
         return true;
       default:
         return true;
+    }
+  };
+
+  const saveCounterEntry = async () => {
+    setError(null);
+    const amount = Number(counterEntry.trim());
+    if (!Number.isInteger(amount) || amount < 1) {
+      setError("Enter a whole number greater than zero.");
+      return;
+    }
+    if (userId == null) {
+      setError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    setSavingCounter(true);
+    try {
+      const nextCount = count + amount;
+      const saved = await saveProof(userId, {
+        activityId: id,
+        proofType: activity.proofType,
+        date: today,
+        count: nextCount,
+      });
+      setCount(nextCount);
+      setExisting(saved);
+      setCounterEntry("");
+    } catch {
+      setError("Could not save. Please try again.");
+    } finally {
+      setSavingCounter(false);
     }
   };
 
@@ -426,26 +466,37 @@ export default function TrackActivity() {
 
                 {activity.proofType === "COUNTER" && (
                   <View style={styles.counterBox}>
-                    <Text style={styles.timerValue}>{count}</Text>
-                    {cfg.counterTarget ? (
-                      <Text style={styles.body}>
-                        Target: {cfg.counterTarget}
-                      </Text>
-                    ) : null}
-                    <View style={styles.photoButtons}>
-                      <Button
-                        label="−"
-                        variant="secondary"
-                        onPress={() => setCount((c) => Math.max(0, c - 1))}
-                        style={{ flex: 1 }}
+                    <Text style={styles.counterLabel}>TODAY'S TOTAL</Text>
+                    <View style={styles.counterTotalRow}>
+                      <Text style={styles.timerValue}>{count}</Text>
+                      {cfg.counterTarget ? (
+                        <Text style={styles.counterTarget}>
+                          / {cfg.counterTarget}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.counterEntryWrap}>
+                      <Text style={styles.fieldLabel}>Squats completed now</Text>
+                      <TextInput
+                        value={counterEntry}
+                        onChangeText={setCounterEntry}
+                        placeholder="Enter an amount"
+                        placeholderTextColor={colors.inkMuted}
+                        keyboardType="number-pad"
+                        returnKeyType="done"
+                        style={[styles.input, styles.counterInput]}
                       />
                       <Button
-                        label="+"
+                        label="Add to total"
                         variant="secondary"
-                        onPress={() => setCount((c) => c + 1)}
-                        style={{ flex: 1 }}
+                        onPress={saveCounterEntry}
+                        loading={savingCounter}
+                        disabled={!counterEntry.trim()}
                       />
                     </View>
+                    {counterReachedTarget ? (
+                      <Text style={styles.timerDone}>✓ Daily target reached</Text>
+                    ) : null}
                   </View>
                 )}
 
@@ -462,7 +513,9 @@ export default function TrackActivity() {
                   onPress={submit}
                   loading={submitting}
                   disabled={
-                    activity.proofType === "TIMER" && !timerReachedTarget
+                    (activity.proofType === "TIMER" && !timerReachedTarget) ||
+                    (activity.proofType === "COUNTER" &&
+                      !counterReachedTarget)
                   }
                   style={{ marginTop: spacing.lg }}
                 />
@@ -633,8 +686,8 @@ const styles = StyleSheet.create({
   },
   counterBox: {
     alignItems: "center",
-    paddingVertical: spacing.lg,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    gap: spacing.xs,
     width: "100%",
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
@@ -643,6 +696,32 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   timerValue: { fontFamily: fonts.display, fontSize: 56, color: colors.brass },
+  counterLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.inkMuted,
+  },
+  counterTotalRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: spacing.md,
+  },
+  counterTarget: {
+    fontFamily: fonts.display,
+    fontSize: 28,
+    color: colors.inkMuted,
+    marginLeft: spacing.xs,
+  },
+  counterEntryWrap: {
+    alignSelf: "stretch",
+    gap: spacing.sm,
+  },
+  counterInput: {
+    textAlign: "center",
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 20,
+  },
   timerUnit: { fontFamily: fonts.body, fontSize: 20, color: colors.inkMuted },
   timerDone: {
     fontFamily: fonts.bodySemiBold,

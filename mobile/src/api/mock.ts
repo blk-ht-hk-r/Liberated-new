@@ -38,11 +38,11 @@ const a = (
 export const MOCK_ACTIVITIES: Activity[] = [
   a("Go for a workout", "Hit the gym or train at home.", "PHYSICAL", "PHOTO"),
   a(
-    "100 squats",
-    "Do 100 squats through the day.",
+    "50 squats",
+    "Do 50 squats through the day.",
     "PHYSICAL",
     "COUNTER",
-    '{"counterTarget":100}',
+    '{"counterTarget":50}',
   ),
   a("Cold shower", "Take a cold shower.", "PHYSICAL", "PHOTO"),
   a(
