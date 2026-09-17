@@ -22,7 +22,7 @@ interface AuthState {
   displayName: string | null;
   token: string | null;
   status: AuthStatus;
-  /** Whether the post-login quote popup has been shown this session. */
+  /** Whether the post-login quote popup has been acknowledged by this user. */
   quoteShown: boolean;
 
   bootstrap: () => Promise<void>;
@@ -37,7 +37,7 @@ interface AuthState {
   loginWithGoogle: (idToken: string) => Promise<void>;
   /** Dev-only: start a local offline demo session with no backend. */
   enableOfflineMode: () => Promise<void>;
-  markQuoteShown: () => void;
+  markQuoteShown: () => Promise<void>;
   clearSession: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -50,7 +50,7 @@ function applyAuth(set: any, data: AuthResponse) {
     displayName: data.displayName,
     token: data.token,
     status: "authenticated",
-    quoteShown: false,
+    quoteShown: data.welcomeAcknowledged,
   });
 }
 
@@ -98,6 +98,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         email: data.email,
         displayName: data.displayName,
         status: "authenticated",
+        quoteShown: data.welcomeAcknowledged,
       });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -153,7 +154,10 @@ export const useAuth = create<AuthState>((set, get) => ({
     applyAuth(set, data);
   },
 
-  markQuoteShown: () => set({ quoteShown: true }),
+  markQuoteShown: async () => {
+    await api.post("/api/auth/welcome/acknowledge");
+    set({ quoteShown: true });
+  },
 
   enableOfflineMode: async () => {
     setOffline(true);

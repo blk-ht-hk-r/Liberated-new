@@ -127,15 +127,25 @@ public class AuthService {
         userRepository.save(user);
     }
 
-        public CurrentUserResponse currentUser(Long userId) {
+    public void acknowledgeWelcome(Long userId) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
-        return new CurrentUserResponse(
-            user.getId(),
-            user.getEmail(),
-            user.getDisplayName(),
-            user.getAuthProvider().name());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        if (!user.isWelcomeAcknowledged()) {
+            user.setWelcomeAcknowledged(true);
+            userRepository.save(user);
         }
+    }
+
+    public CurrentUserResponse currentUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        return new CurrentUserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getAuthProvider().name(),
+                user.isWelcomeAcknowledged());
+    }
 
     private AuthResponse toResponse(User user) {
         String token = jwtService.generateToken(user.getId(),
@@ -145,6 +155,7 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),
-                user.getAuthProvider().name());
+                user.getAuthProvider().name(),
+                user.isWelcomeAcknowledged());
     }
 }

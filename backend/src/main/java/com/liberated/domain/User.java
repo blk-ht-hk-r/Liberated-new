@@ -35,6 +35,8 @@ public class User {
     /** Expo push token for delivering failure / reminder notifications. */
     private String expoPushToken;
 
+    private Boolean welcomeAcknowledged = false;
+
     private Instant createdAt = Instant.now();
 
     protected User() {
@@ -111,6 +113,14 @@ public class User {
 
     public void setExpoPushToken(String expoPushToken) {
         this.expoPushToken = expoPushToken;
+    }
+
+    public boolean isWelcomeAcknowledged() {
+        return Boolean.TRUE.equals(welcomeAcknowledged);
+    }
+
+    public void setWelcomeAcknowledged(boolean welcomeAcknowledged) {
+        this.welcomeAcknowledged = welcomeAcknowledged;
     }
 
     public Instant getCreatedAt() {

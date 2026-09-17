@@ -61,4 +61,10 @@ public class AuthController {
         authService.savePushToken(userId, req.expoPushToken());
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/welcome/acknowledge")
+    public ResponseEntity<Void> acknowledgeWelcome(@AuthenticationPrincipal Long userId) {
+        authService.acknowledgeWelcome(userId);
+        return ResponseEntity.noContent().build();
+    }
 }

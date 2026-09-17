@@ -59,6 +59,7 @@ export interface AuthResponse {
   email: string | null;
   displayName: string | null;
   authProvider: string;
+  welcomeAcknowledged: boolean;
 }
 
 export interface CurrentUserResponse {
@@ -66,4 +67,5 @@ export interface CurrentUserResponse {
   email: string | null;
   displayName: string | null;
   authProvider: string;
+  welcomeAcknowledged: boolean;
 }

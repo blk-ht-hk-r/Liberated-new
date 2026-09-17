@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -60,9 +61,16 @@ export default function Home() {
     }, [fetchState]),
   );
 
-  const dismissQuote = () => {
-    setShowQuote(false);
-    markQuoteShown();
+  const dismissQuote = async () => {
+    try {
+      await markQuoteShown();
+      setShowQuote(false);
+    } catch {
+      Alert.alert(
+        "Could not save your response",
+        "Check your connection and try again.",
+      );
+    }
   };
 
   // Restarting after completion must also wipe the on-device logs from the

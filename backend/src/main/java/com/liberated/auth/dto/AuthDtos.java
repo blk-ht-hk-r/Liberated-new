@@ -43,14 +43,16 @@ public class AuthDtos {
                         Long userId,
                         String email,
                         String displayName,
-                        String authProvider) {
+                        String authProvider,
+                        boolean welcomeAcknowledged) {
         }
 
         public record CurrentUserResponse(
                         Long userId,
                         String email,
                         String displayName,
-                        String authProvider) {
+                        String authProvider,
+                        boolean welcomeAcknowledged) {
         }
 
         public record PushTokenRequest(
