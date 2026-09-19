@@ -40,7 +40,14 @@ import {
 } from "@/theme";
 import { useNow } from "@/hooks/time";
 
-function parseConfig(json: string): Record<string, number> {
+interface TrackingConfig {
+  listSize?: number;
+  timerTargetMin?: number;
+  counterTarget?: number;
+  counterLabel?: string;
+}
+
+function parseConfig(json: string): TrackingConfig {
   try {
     return JSON.parse(json) ?? {};
   } catch {
@@ -476,7 +483,9 @@ export default function TrackActivity() {
                       ) : null}
                     </View>
                     <View style={styles.counterEntryWrap}>
-                      <Text style={styles.fieldLabel}>Squats completed now</Text>
+                      <Text style={styles.fieldLabel}>
+                        {cfg.counterLabel ?? "Completed now"}
+                      </Text>
                       <TextInput
                         value={counterEntry}
                         onChangeText={setCounterEntry}

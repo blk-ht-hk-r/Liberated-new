@@ -15,18 +15,21 @@ interface Props {
 /** Map a few common activity titles to nicer icons; otherwise fall back to the
  *  category icon. */
 const TITLE_ICONS: { match: RegExp; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { match: /call|friend|love/i, icon: "call" },
+  { match: /friend|plans with/i, icon: "people" },
   { match: /read|book/i, icon: "book" },
-  { match: /walk/i, icon: "walk" },
-  { match: /workout|squat|gym|train/i, icon: "barbell" },
+  { match: /walk|run/i, icon: "walk" },
+  { match: /workout|squat|push-up|gym|train/i, icon: "barbell" },
   { match: /cold shower|shower/i, icon: "water" },
   { match: /meditate|still/i, icon: "leaf" },
-  { match: /pray/i, icon: "moon" },
-  { match: /cook|meal/i, icon: "restaurant" },
-  { match: /draw|paint/i, icon: "color-palette" },
+  { match: /pray|worship/i, icon: "moon" },
+  { match: /dish|cook|meal/i, icon: "restaurant" },
+  { match: /sketch|draw|paint/i, icon: "color-palette" },
   { match: /journal|write|reflect|feeling/i, icon: "create" },
   { match: /listen|album|music/i, icon: "musical-notes" },
-  { match: /work|customer|money|income/i, icon: "briefcase" },
+  { match: /declutter|organize/i, icon: "file-tray-stacked" },
+  { match: /finance|invest/i, icon: "trending-up" },
+  { match: /goal|resume|portfolio|learn|work/i, icon: "briefcase" },
+  { match: /hobby/i, icon: "extension-puzzle" },
 ];
 
 function iconFor(

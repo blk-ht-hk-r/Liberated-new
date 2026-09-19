@@ -34,7 +34,7 @@ export const categoryColors: Record<Category, string> = {
   SPIRITUAL: "#7BA694", // sage
   CAREER: "#5E8C8A", // deep teal-green
   RELATIONAL: "#8FAAC7", // soft sky
-  CONTENT: "#88B4AE", // soft teal
+  CREATIVITY: "#88B4AE", // soft teal
   PROCESSING: "#9C9F7E", // muted olive
 };
 
@@ -44,7 +44,7 @@ export const categoryIcons: Record<Category, string> = {
   SPIRITUAL: "leaf",
   CAREER: "briefcase",
   RELATIONAL: "heart",
-  CONTENT: "brush",
+  CREATIVITY: "brush",
   PROCESSING: "journal",
 };
 
@@ -53,7 +53,7 @@ export const categoryEmojis: Record<Category, string> = {
   SPIRITUAL: "🌙",
   CAREER: "🌤️",
   RELATIONAL: "🤍",
-  CONTENT: "🌊",
+  CREATIVITY: "🌊",
   PROCESSING: "☁️",
 };
 
@@ -62,7 +62,7 @@ export const categoryLabels: Record<Category, string> = {
   SPIRITUAL: "Spiritual",
   CAREER: "Career",
   RELATIONAL: "Relational",
-  CONTENT: "Content",
+  CREATIVITY: "Creativity",
   PROCESSING: "Processing",
 };
 

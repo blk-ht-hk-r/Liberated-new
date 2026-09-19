@@ -5,7 +5,7 @@ export type Category =
   | "SPIRITUAL"
   | "CAREER"
   | "RELATIONAL"
-  | "CONTENT"
+  | "CREATIVITY"
   | "PROCESSING";
 
 export type ProofType =

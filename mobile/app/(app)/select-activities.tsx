@@ -133,6 +133,9 @@ export default function SelectActivities() {
             disabled={isEdit ? !isDifferentFromToday : !canStart}
             loading={loading}
           />
+          {!isEdit ? (
+            <Text style={styles.editHint}>You can change these later</Text>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -165,6 +168,13 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     marginTop: 4,
     marginBottom: spacing.lg,
+  },
+  editHint: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.inkMuted,
+    textAlign: "center",
+    marginTop: -spacing.xs,
   },
   grid: {
     flexDirection: "row",

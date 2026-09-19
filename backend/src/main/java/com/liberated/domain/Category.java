@@ -6,6 +6,6 @@ public enum Category {
     SPIRITUAL,
     CAREER,
     RELATIONAL,
-    CONTENT,
+    CREATIVITY,
     PROCESSING
 }
